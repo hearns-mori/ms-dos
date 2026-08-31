@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Mori Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<style>
+:root{
+  --bg:#0f1115; --bg-panel:#15181e; --bg-elevated:#1b1f26; --bg-hover:#222731;
+  --border:#2a2f39; --border-soft:#20242c;
+  --text:#eceff3; --text-dim:#9aa2ae; --text-faint:#626a76;
+  --accent:#d9c7a3; --accent-soft:#3a352d; --accent-glow:rgba(217,199,163,.13);
+  --user:#8fc7bb; --user-dim:#263936;
+  --danger:#d37b84; --danger-dim:#362326;
+  --sans:'DM Sans',system-ui,-apple-system,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --radius:8px;
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;}
+body{
+  background:var(--bg); color:var(--text); font-family:var(--sans);
+  font-size:13.5px; display:flex; flex-direction:column; overflow:hidden;
+}
+button{
+  font-family:var(--sans); cursor:pointer; border:1px solid var(--border);
+  background:var(--bg-elevated); color:var(--text); border-radius:var(--radius);
+  padding:5px 10px; font-size:12.5px; transition:background .12s,border-color .12s;
+}
+button:hover{background:var(--bg-hover); border-color:#3a4256;}
+button:active{transform:translateY(1px);}
+button:disabled{opacity:.45; cursor:default;}
+button.btn-ai{background:var(--accent); color:#17150f; border:none; font-weight:600;}
+button.btn-ai:hover{background:#e5d5b5;}
+button.btn-user{background:var(--user); color:#0a1715; border:none; font-weight:600;}
+button.btn-user:hover{background:#a6ddd3;}
+button.btn-danger{background:var(--danger-dim); color:#ffb3ba; border-color:#5a2a30;}
+input,textarea,select{
+  font-family:var(--sans); background:var(--bg); color:var(--text);
+  border:1px solid var(--border); border-radius:var(--radius); padding:6px 8px; font-size:12.5px;
+}
+input:focus,textarea:focus,select:focus{outline:2px solid #3a4256; outline-offset:0; border-color:#4a5470;}
+::-webkit-scrollbar{width:9px; height:9px;}
+::-webkit-scrollbar-thumb{background:#2c3142; border-radius:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+
+/* ---------- top bar ---------- */
+#topbar{
+  height:52px; flex:0 0 52px; display:flex; align-items:center; justify-content:space-between;
+  padding:0 16px; background:rgba(21,24,30,.96); border-bottom:1px solid var(--border);
+}
+.brand{font-weight:700; font-size:15px; letter-spacing:.2px; display:flex; align-items:center; gap:9px;}
+.brand .tagline{font-weight:500; font-size:10.5px; color:var(--text-faint); font-family:var(--mono); letter-spacing:.2px; border-left:1px solid var(--border); padding-left:9px;}
+#topbar-right{display:flex; align-items:center; gap:10px;}
+.dot{width:8px; height:8px; border-radius:50%; background:var(--danger); display:inline-block; box-shadow:0 0 6px rgba(224,97,111,.6);}
+.dot.ok{background:var(--user); box-shadow:0 0 6px rgba(69,208,196,.6);}
+
+/* ---------- layout ---------- */
+#body{flex:1; display:flex; min-height:0;}
+#sidebar{
+  width:270px; flex:0 0 270px; background:var(--bg-panel); border-right:1px solid var(--border);
+  display:flex; flex-direction:column; min-height:0;
+}
+.sidebar-toolbar{display:flex; gap:4px; padding:8px; border-bottom:1px solid var(--border-soft); flex-wrap:wrap;}
+.sidebar-toolbar button{padding:5px 7px; font-size:14px; line-height:1;}
+#tree{flex:1; overflow:auto; padding:4px 0;}
+.tree-row{
+  display:flex; align-items:center; gap:6px; padding:3px 8px; white-space:nowrap;
+  border-radius:4px; margin:0 4px; cursor:pointer; user-select:none;
+}
+.tree-row:hover{background:var(--bg-hover);}
+.tree-row.folder-active{background:var(--bg-elevated); outline:1px solid var(--border);}
+.tree-row .chk{flex:0 0 auto;}
+.tree-row .icon{flex:0 0 auto; opacity:.85; font-size:12px; width:14px; text-align:center;}
+.tree-row .nm{overflow:hidden; text-overflow:ellipsis; flex:1;}
+.tree-loading{padding:6px 12px; color:var(--text-faint); font-size:12px;}
+.git-panel{border-top:1px solid var(--border-soft); padding:10px; display:flex; flex-direction:column; gap:6px;}
+.git-title{font-size:11px; text-transform:uppercase; letter-spacing:.6px; color:var(--text-faint); font-weight:600; margin-bottom:2px;}
+.git-panel input{width:100%;}
+#gitBtn{width:100%;}
+
+#main{flex:1; display:flex; flex-direction:column; min-width:0; min-height:0;}
+#tabbar{display:flex; align-items:stretch; background:var(--bg-panel); border-bottom:1px solid var(--border); overflow-x:auto; flex:0 0 auto;}
+.tab{
+  display:flex; align-items:center; gap:6px; padding:8px 10px; font-size:12.5px; font-family:var(--mono);
+  border-right:1px solid var(--border-soft); cursor:pointer; color:var(--text-dim); white-space:nowrap; position:relative;
+}
+.tab:hover{background:var(--bg-hover); color:var(--text);}
+.tab.active{color:var(--text); background:var(--bg);}
+.tab.active::after{content:''; position:absolute; left:0; right:0; bottom:-1px; height:2px; background:var(--user);}
+.tab.dirty .tab-name::after{content:''; }
+.tab .dot{width:6px; height:6px; background:var(--text-dim); box-shadow:none;}
+.tab-close{opacity:.5; font-size:14px; padding:0 2px;}
+.tab-close:hover{opacity:1; color:var(--danger);}
+.tab.gemini-tab{color:var(--accent); font-weight:600; margin-left:auto; border-left:1px solid var(--border); margin-right:8px;}
+.tab.gemini-tab.active::after{background:var(--accent);}
+
+#editorWrap{flex:1; display:flex; flex-direction:column; min-height:0;}
+#editorToolbar{
+  display:flex; align-items:center; gap:8px; padding:6px 10px; border-bottom:1px solid var(--border-soft);
+  background:var(--bg-panel); font-family:var(--mono); font-size:11.5px; color:var(--text-dim); flex:0 0 auto;
+}
+#editorToolbar .path{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+#cmHost{flex:1; min-height:0; overflow:hidden;}
+.CodeMirror{height:100%; font-family:var(--mono); font-size:13px; line-height:1.55;}
+
+/* Selected ranges */
+.cm-ai-target{background:var(--accent-glow); box-shadow:inset 3px 0 0 var(--accent);}
+.cm-ai-context{box-shadow:inset 3px 0 0 var(--user);}
+
+#emptyState{flex:1; display:flex; align-items:center; justify-content:center; color:var(--text-faint); font-size:13px; text-align:center; padding:20px;}
+
+/* ---------- gemini panel ---------- */
+#geminiPanel{flex:1; overflow:auto; padding:16px 18px; display:none;}
+#geminiPanel.visible{display:block;}
+.gemini-grid{display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:start;}
+.gemini-col h3{font-size:11.5px; text-transform:uppercase; letter-spacing:.6px; color:var(--text-dim); margin:14px 0 6px; display:flex; align-items:center; gap:8px;}
+.gemini-col h3:first-child{margin-top:0;}
+.gemini-col h3 .hint{font-size:10.5px; text-transform:none; letter-spacing:0; color:var(--text-faint); font-weight:400;}
+.item-list{display:flex; flex-direction:column; gap:6px; margin-bottom:6px;}
+.ai-item{
+  display:flex; align-items:center; gap:8px; background:var(--bg-elevated); border:1px solid var(--border);
+  border-radius:var(--radius); padding:6px 8px; font-size:12px;
+}
+.ai-item.is-target{border-left:3px solid var(--accent);}
+.ai-item.is-context{border-left:3px solid var(--user);}
+.ai-item .path{flex:1; font-family:var(--mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.ai-item .rm{background:none; border:none; color:var(--text-faint); font-size:15px; padding:0 4px;}
+.ai-item .rm:hover{color:var(--danger);}
+.ai-item label{display:flex; align-items:center; gap:3px; font-size:11px; color:var(--text-dim); white-space:nowrap;}
+.ai-item input[type=number]{width:52px; padding:3px 5px;}
+.empty-hint{color:var(--text-faint); font-size:11.5px; font-style:italic; padding:4px 2px;}
+
+#geminiPrompt{width:100%; resize:vertical; font-family:var(--mono); font-size:12.5px;}
+.gemini-row{display:flex; gap:14px; margin:10px 0; align-items:center; flex-wrap:wrap;}
+.gemini-row label{display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--text-dim);}
+#generateBtn{width:100%; padding:9px; font-size:13px; margin-top:4px;}
+
+#geminiResults{margin-top:22px; border-top:1px solid var(--border-soft); padding-top:16px;}
+.gemini-explanation{background:var(--bg-elevated); border:1px solid var(--border); border-radius:var(--radius); padding:10px 12px; font-size:12.5px; color:var(--text-dim); margin-bottom:14px; white-space:pre-wrap;}
+.diff-card{border:1px solid var(--border); border-radius:var(--radius); margin-bottom:14px; overflow:hidden;}
+.diff-head{display:flex; align-items:center; gap:8px; background:var(--bg-elevated); padding:7px 10px; border-bottom:1px solid var(--border-soft);}
+.diff-path{font-family:var(--mono); font-size:12px; flex:1; color:var(--text);}
+.diff-body{margin:0; padding:8px 0; max-height:340px; overflow:auto; font-family:var(--mono); font-size:12px; line-height:1.55; background:var(--bg);}
+.diff-line{padding:0 10px; white-space:pre-wrap; word-break:break-all;}
+.diff-add{background:rgba(69,208,196,.10); color:#a9ece6;}
+.diff-del{background:rgba(224,97,111,.10); color:#f0aab0; text-decoration:line-through; text-decoration-color:rgba(240,170,176,.5);}
+.diff-eq{color:var(--text-faint);}
+.applied-badge{color:var(--user); font-size:11px; font-weight:600;}
+
+/* ---------- log panel ---------- */
+#logPanel{flex:0 0 auto; background:var(--bg-panel); border-top:1px solid var(--border); max-height:160px; display:flex; flex-direction:column;}
+#logPanel.collapsed #logBody{display:none;}
+#logHeader{display:flex; justify-content:space-between; align-items:center; padding:5px 10px; font-size:11px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.5px; cursor:pointer;}
+#logBody{overflow:auto; padding:0 10px 8px; font-family:var(--mono); font-size:11.5px;}
+.log-line{padding:2px 0; color:var(--text-dim); border-bottom:1px dotted var(--border-soft);}
+.log-line .ts{color:var(--text-faint); margin-right:6px;}
+.log-line.ok{color:#a9ece6;}
+.log-line.err{color:#f0aab0;}
+
+/* ---------- modals ---------- */
+.modal-backdrop{position:fixed; inset:0; background:rgba(8,10,14,.6); display:flex; align-items:center; justify-content:center; z-index:100;}
+.modal{background:var(--bg-panel); border:1px solid var(--border); border-radius:8px; width:440px; max-width:92vw; max-height:82vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,.5);}
+.modal-title{padding:14px 16px; font-weight:600; font-size:13.5px; border-bottom:1px solid var(--border-soft);}
+.modal-body{padding:14px 16px; overflow:auto; display:flex; flex-direction:column; gap:10px;}
+.modal-body label{font-size:11.5px; color:var(--text-dim); display:flex; flex-direction:column; gap:4px;}
+.modal-body input,.modal-body textarea{width:100%;} .modal-body textarea{resize:vertical; font-family:var(--mono);}
+.modal-foot{padding:12px 16px; border-top:1px solid var(--border-soft); display:flex; justify-content:flex-end; gap:8px;}
+.modal-tree{border:1px solid var(--border); border-radius:var(--radius); max-height:280px; overflow:auto; padding:4px 0;}
+.modal-hint{font-size:11px; color:var(--text-faint); line-height:1.5;}
+
+
+/* ---------- refined layout ---------- */
+#body{background:var(--bg);}
+#sidebar{box-shadow:12px 0 32px rgba(0,0,0,.08);}
+.sidebar-toolbar{padding:9px 10px;}
+.sidebar-toolbar button{border-radius:7px;}
+#editorToolbar{padding:7px 12px;}
+#editorToolbar .path{color:var(--text);}
+#geminiPanel{padding:22px; background:linear-gradient(180deg,rgba(255,255,255,.012),transparent 220px);}
+.gemini-grid{gap:22px;}
+.gemini-col{background:transparent;}
+.gemini-col h3{margin-top:18px;}
+.gemini-col h3:first-child{margin-top:0;}
+#geminiPrompt{min-height:160px; border-radius:9px; padding:11px 12px; line-height:1.5;}
+.ai-item{border-radius:9px; padding:8px 10px;}
+.diff-card{border-radius:9px;}
+.diff-head{padding:9px 10px;}
+#logPanel{background:#12151a;}
+#logHeader{padding:7px 10px;}
+.modal{border-radius:12px;}
+.modal-title{padding:15px 17px;}
+.modal-body{padding:16px 17px;}
+.modal-foot{padding:12px 17px;}
+textarea{line-height:1.5;}
+@media (max-width:860px){
+  #topbar{height:50px; flex-basis:50px; padding:0 10px;}
+  .brand .tagline{display:none;}
+  #sidebar{height:calc(100% - 50px); width:290px; flex-basis:290px;}
+  #geminiPanel{padding:15px;}
+}
+
+@media (max-width:860px){
+  #sidebar{position:absolute; z-index:40; height:calc(100% - 44px); box-shadow:6px 0 20px rgba(0,0,0,.4); transform:translateX(-100%); transition:transform .18s;}
+  #sidebar.open{transform:translateX(0);}
+  .gemini-grid{grid-template-columns:1fr;}
+  #hamburger{display:inline-block !important;}
+}
+#hamburger{display:none;}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <div class="brand">
+    <button id="hamburger" title="Toggle sidebar">☰</button>
+    <span>mori studio</span>
+    <span class="tagline">code, files &amp; tools</span>
+  </div>
+  <div id="topbar-right">
+    <span id="connDot" class="dot" title="connection status"></span>
+    <button id="settingsBtn">⚙ Settings</button>
+  </div>
+</div>
+
+<div id="body">
+  <aside id="sidebar">
+    <div class="sidebar-toolbar">
+      <button data-action="new-file" title="New file">📄+</button>
+      <button data-action="new-folder" title="New folder">📁+</button>
+      <button data-action="move" title="Move selected">⇥ move</button>
+      <button data-action="delete" title="Delete selected">🗑</button>
+      <button data-action="refresh" title="Refresh tree">⟳</button>
+    </div>
+    <div id="tree"><div class="tree-loading">connect in Settings to load your workspace…</div></div>
+    <div class="git-panel">
+      <div class="git-title">Git</div>
+      <input id="gitPath" placeholder="folder (relative to root)" value=""/>
+      <input id="gitMsg" placeholder="commit message (optional)"/>
+      <button id="gitBtn" class="btn-user">Commit &amp;&amp; Push</button>
+    </div>
+  </aside>
+
+  <main id="main">
+    <div id="tabbar"></div>
+    <div id="editorWrap" style="display:none;">
+      <div id="editorToolbar">
+        <span class="path" id="toolbarPath"></span>
+        <button id="addCtxFromEditor" title="Add current selection (or whole file) as AI context">→ AI context</button>
+        <button id="addTgtFromEditor" title="Add current selection (or whole file) as AI edit target">→ AI target</button>
+        <button id="saveTabBtn" class="btn-user">💾 Save</button>
+      </div>
+      <div id="cmHost"></div>
+    </div>
+    <div id="emptyState">Open a file from the workspace, or switch to the assistant tab.<br/>Nothing is written until you choose Save, Apply, or Commit &amp; Push.</div>
+    <div id="geminiPanel" aria-label="Mori Assistant">
+      <div class="gemini-grid">
+        <div class="gemini-col">
+          <h3>Reference <span class="hint">— files used for context</span></h3>
+          <div id="ctxList" class="item-list"></div>
+          <button id="addCtxBtn">+ Add file…</button>
+
+          <h3>Edit targets <span class="hint">— files/ranges that may change</span></h3>
+          <div id="tgtList" class="item-list"></div>
+          <button id="addTgtBtn">+ Add file…</button>
+        </div>
+        <div class="gemini-col">
+          <label style="font-size:11.5px;color:var(--text-dim);display:block;margin-bottom:4px;">Prompt</label>
+          <textarea id="geminiPrompt" rows="7" placeholder="Describe the change you want…"></textarea>
+          <div class="gemini-row">
+            <label>Model <input id="geminiModel" value="gemini-3.5-flash" style="width:170px"/></label>
+            <label>Temp <input id="geminiTemp" type="number" step="0.1" min="0" max="2" value="0.3" style="width:56px"/></label>
+          </div>
+          <button id="generateBtn" class="btn-ai">Generate</button>
+          <div class="modal-hint" style="margin-top:8px;">Nothing is written yet — review the proposed changes below before applying them.</div>
+        </div>
+      </div>
+      <div id="geminiResults"></div>
+    </div>
+  </main>
+</div>
+
+<div id="logPanel">
+  <div id="logHeader"><span>Log</span><span id="logToggleIcon">▾</span></div>
+  <div id="logBody"></div>
+</div>
+
+<div id="modalRoot"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/markdown/markdown.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/shell/shell.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/yaml/yaml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/sql/sql.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/php/php.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/go/go.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/rust/rust.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/ruby/ruby.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   STATE
+   ============================================================ */
+const state = {
+  token: localStorage.getItem('webide_token') || '',
+  geminiKeys: (() => { try { const saved = JSON.parse(localStorage.getItem('webide_gemini_keys') || '[]'); return Array.isArray(saved) ? saved : []; } catch(e){ return []; } })(),
+  tree: {},                 // path -> entries[]
+  expanded: new Set(['']),  // root always "expanded"
+  checked: new Set(),       // paths selected for move/delete
+  activeFolder: '',         // last-clicked folder, feeds the git panel
+  tabs: [],                 // {path, doc, originalContent, dirty}
+  activeTab: null,          // path string, or '__gemini__', or null
+  gemini: { context: [], targets: [], results: null, lastContents: null },
+  connected: false,
+};
+
+// Migrate the older single-key setting without changing how existing setups work.
+if (!state.geminiKeys.length) {
+  const legacyKey = localStorage.getItem('webide_gemini_key') || '';
+  if (legacyKey.trim()) state.geminiKeys = [legacyKey.trim()];
+}
+
+let idCounter = 1;
+const genId = () => 't' + (idCounter++);
+
+const MODE_MAP = {
+  py:'python', js:'javascript', mjs:'javascript', cjs:'javascript', jsx:'javascript',
+  ts:'javascript', tsx:'javascript', json:{name:'javascript', json:true},
+  html:'htmlmixed', htm:'htmlmixed', xml:'xml', svg:'xml',
+  css:'css', md:'markdown', markdown:'markdown', sh:'shell', bash:'shell', zsh:'shell',
+  yml:'yaml', yaml:'yaml', sql:'sql', php:'php',
+  java:'text/x-java', c:'text/x-csrc', h:'text/x-csrc', cpp:'text/x-c++src', cc:'text/x-c++src',
+  hpp:'text/x-c++src', cs:'text/x-csharp', go:'go', rs:'rust', rb:'ruby',
+};
+function modeFor(path){
+  const ext = path.split('.').pop().toLowerCase();
+  return MODE_MAP[ext] || null;
+}
+function basename(p){ const parts = p.split('/'); return parts[parts.length-1] || p; }
+function dirname(p){ const i = p.lastIndexOf('/'); return i<0 ? '' : p.slice(0,i); }
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function uniq(arr){ return [...new Set(arr)]; }
+
+/* ============================================================
+   LOG PANEL
+   ============================================================ */
+function log(msg, level){
+  const body = document.getElementById('logBody');
+  const line = document.createElement('div');
+  line.className = 'log-line' + (level ? ' '+level : '');
+  const ts = new Date().toLocaleTimeString();
+  line.innerHTML = `<span class="ts">${ts}</span>${escapeHtml(msg)}`;
+  body.appendChild(line);
+  body.scrollTop = body.scrollHeight;
+}
+document.getElementById('logHeader').onclick = () => {
+  const p = document.getElementById('logPanel');
+  p.classList.toggle('collapsed');
+  document.getElementById('logToggleIcon').textContent = p.classList.contains('collapsed') ? '▸' : '▾';
+};
+
+/* ============================================================
+   API
+   ============================================================ */
+async function api(method, path, body){
+  const headers = { 'X-Auth-Token': state.token };
+  const opts = { method, headers };
+  if (body !== undefined){ headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+  let res;
+  try{
+    res = await fetch(path, opts);
+  }catch(e){
+    throw new Error('network error — is the server reachable?');
+  }
+  let json;
+  try{ json = await res.json(); }
+  catch(e){ throw new Error('bad response (HTTP '+res.status+')'); }
+  if (!res.ok || json.ok === false) throw new Error(json.error || ('HTTP '+res.status));
+  return json;
+}
+
+async function checkConnection(){
+  try{
+    await api('GET', '/api/health');
+    state.connected = true;
+    document.getElementById('connDot').classList.add('ok');
+    log('connected to server', 'ok');
+    return true;
+  }catch(e){
+    state.connected = false;
+    document.getElementById('connDot').classList.remove('ok');
+    log('not connected: ' + e.message, 'err');
+    return false;
+  }
+}
+
+/* ============================================================
+   MODALS
+   ============================================================ */
+function openModal({title, bodyHtml, buttons, onMount}){
+  return new Promise((resolve) => {
+    const root = document.getElementById('modalRoot');
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop';
+    backdrop.innerHTML = `
+      <div class="modal">
+        <div class="modal-title">${escapeHtml(title)}</div>
+        <div class="modal-body">${bodyHtml}</div>
+        <div class="modal-foot"></div>
+      </div>`;
+    root.appendChild(backdrop);
+    const foot = backdrop.querySelector('.modal-foot');
+    function close(val){ root.removeChild(backdrop); resolve(val); }
+    (buttons || [{label:'Cancel', val:null}, {label:'OK', val:true, primary:true}]).forEach(b => {
+      const btn = document.createElement('button');
+      btn.textContent = b.label;
+      if (b.primary) btn.className = 'btn-user';
+      btn.onclick = () => close(typeof b.val === 'function' ? b.val(backdrop) : b.val);
+      foot.appendChild(btn);
+    });
+    backdrop.addEventListener('mousedown', (e) => { if (e.target === backdrop) close(null); });
+    if (onMount) onMount(backdrop, close);
+  });
+}
+
+async function promptModal(title, placeholder, defaultValue){
+  return openModal({
+    title,
+    bodyHtml: `<input id="pmInput" placeholder="${escapeHtml(placeholder||'')}" value="${escapeHtml(defaultValue||'')}"/>`,
+    buttons: [
+      {label:'Cancel', val:null},
+      {label:'OK', val:(el)=>el.querySelector('#pmInput').value.trim(), primary:true},
+    ],
+    onMount:(el)=>{ const inp = el.querySelector('#pmInput'); inp.focus(); inp.select();
+      inp.addEventListener('keydown', e => { if (e.key==='Enter') el.closest('.modal-backdrop').querySelector('.btn-user').click(); }); }
+  });
+}
+
+async function confirmModal(title, message){
+  return openModal({
+    title,
+    bodyHtml: `<div>${escapeHtml(message)}</div>`,
+    buttons: [{label:'Cancel', val:false}, {label:'Delete', val:true, primary:true}],
+  });
+}
+
+function filePickerModal(){
+  return openModal({
+    title: 'Pick a file',
+    bodyHtml: `<div class="modal-hint">Click a file to add it. Folders expand on click.</div><div class="modal-tree" id="pickerTree"></div>`,
+    buttons: [{label:'Cancel', val:null}],
+    onMount:(el, close)=>{
+      const treeEl = el.querySelector('#pickerTree');
+      const localExpanded = new Set(['']);
+      const localCache = {};
+      async function load(path){
+        if (localCache[path]) return localCache[path];
+        const res = await api('GET', '/api/list?path='+encodeURIComponent(path));
+        localCache[path] = res.entries;
+        return res.entries;
+      }
+      async function render(){
+        treeEl.innerHTML = '';
+        treeEl.appendChild(await buildLevel(''));
+      }
+      async function buildLevel(path, depth){
+        depth = depth || 0;
+        const frag = document.createDocumentFragment();
+        const entries = localCache[path] || await load(path);
+        for (const e of entries){
+          const row = document.createElement('div');
+          row.className = 'tree-row';
+          row.style.paddingLeft = (depth*16+8)+'px';
+          row.innerHTML = `<span class="icon">${e.type==='dir' ? (localExpanded.has(e.path)?'📂':'📁') : '📄'}</span><span class="nm">${escapeHtml(e.name)}</span>`;
+          if (e.type === 'dir'){
+            row.onclick = async () => {
+              if (localExpanded.has(e.path)) localExpanded.delete(e.path); else localExpanded.add(e.path);
+              await render();
+            };
+          } else {
+            row.onclick = () => close(e.path);
+          }
+          frag.appendChild(row);
+          if (e.type === 'dir' && localExpanded.has(e.path)){
+            frag.appendChild(await buildLevel(e.path, depth+1));
+          }
+        }
+        return frag;
+      }
+      render();
+    }
+  });
+}
+
+/* ============================================================
+   SETTINGS
+   ============================================================ */
+function openSettings(){
+  openModal({
+    title: 'Workspace settings',
+    bodyHtml: `
+      <label>Server token
+        <input id="setToken" placeholder="printed in the Termux console on startup" value="${escapeHtml(state.token)}"/>
+      </label>
+      <label>Gemini API keys
+        <textarea id="setGeminiKeys" rows="6" placeholder="One API key per line">${escapeHtml(state.geminiKeys.join('\n'))}</textarea>
+      </label>
+      <div class="modal-hint">Add one or more keys, one per line. Mori Studio tries them in order and moves to the next key when a key is rate-limited or rejected. Keys stay in this browser's localStorage.</div>
+    `,
+    buttons: [
+      {label:'Cancel', val:null},
+      {label:'Save', primary:true, val:(el)=>({
+        token: el.querySelector('#setToken').value.trim(),
+        geminiKeys: [...new Set(
+          el.querySelector('#setGeminiKeys').value
+            .split(/\r?\n/)
+            .map(v => v.trim())
+            .filter(Boolean)
+        )],
+      })},
+    ],
+  }).then(async (result) => {
+    if (!result) return;
+    state.token = result.token; state.geminiKeys = result.geminiKeys;
+    localStorage.setItem('webide_token', state.token);
+    localStorage.setItem('webide_gemini_keys', JSON.stringify(state.geminiKeys));
+    // Keep the legacy value in sync for older builds/bookmarks.
+    localStorage.setItem('webide_gemini_key', state.geminiKeys[0] || '');
+    if (await checkConnection()){ invalidateTree(); }
+  });
+}
+document.getElementById('settingsBtn').onclick = openSettings;
+
+/* ============================================================
+   FILE TREE
+   ============================================================ */
+async function loadDir(path){
+  const res = await api('GET', '/api/list?path='+encodeURIComponent(path));
+  state.tree[path] = res.entries;
+  return res.entries;
+}
+function invalidateTree(){ state.tree = {}; renderTree(); }
+
+function renderTree(){
+  const container = document.getElementById('tree');
+  if (!state.connected){
+    container.innerHTML = '<div class="tree-loading">open Settings and connect first…</div>';
+    return;
+  }
+  if (!state.tree['']){
+    container.innerHTML = '<div class="tree-loading">loading…</div>';
+    loadDir('').then(renderTree).catch(e=>log('list failed: '+e.message,'err'));
+    return;
+  }
+  container.innerHTML = '';
+  container.appendChild(renderDirChildren('', 0));
+}
+function renderDirChildren(path, depth){
+  const frag = document.createDocumentFragment();
+  const entries = state.tree[path] || [];
+  for (const e of entries){
+    frag.appendChild(renderRow(e, depth));
+    if (e.type === 'dir' && state.expanded.has(e.path)){
+      if (!state.tree[e.path]){
+        const loading = document.createElement('div');
+        loading.className = 'tree-row tree-loading';
+        loading.style.paddingLeft = ((depth+1)*16+8)+'px';
+        loading.textContent = 'loading…';
+        frag.appendChild(loading);
+        loadDir(e.path).then(renderTree).catch(err=>log('list failed: '+err.message,'err'));
+      } else {
+        frag.appendChild(renderDirChildren(e.path, depth+1));
+      }
+    }
+  }
+  if (entries.length === 0){
+    const empty = document.createElement('div');
+    empty.className = 'tree-loading';
+    empty.style.paddingLeft = ((depth)*16+8)+'px';
+    empty.textContent = '(empty)';
+    frag.appendChild(empty);
+  }
+  return frag;
+}
+function renderRow(e, depth){
+  const row = document.createElement('div');
+  row.className = 'tree-row' + (e.type==='dir' && state.activeFolder===e.path ? ' folder-active' : '');
+  row.style.paddingLeft = (depth*16+4)+'px';
+
+  const chk = document.createElement('input');
+  chk.type = 'checkbox'; chk.className = 'chk';
+  chk.checked = state.checked.has(e.path);
+  chk.onclick = (ev) => { ev.stopPropagation(); if (chk.checked) state.checked.add(e.path); else state.checked.delete(e.path); };
+  row.appendChild(chk);
+
+  const icon = document.createElement('span');
+  icon.className = 'icon';
+  icon.textContent = e.type==='dir' ? (state.expanded.has(e.path) ? '📂' : '📁') : '📄';
+  row.appendChild(icon);
+
+  const nm = document.createElement('span');
+  nm.className = 'nm';
+  nm.textContent = e.name;
+  row.appendChild(nm);
+
+  row.onclick = () => {
+    if (e.type === 'dir'){
+      if (state.expanded.has(e.path)) state.expanded.delete(e.path); else state.expanded.add(e.path);
+      state.activeFolder = e.path;
+      document.getElementById('gitPath').value = e.path;
+      renderTree();
+    } else {
+      openTab(e.path);
+    }
+  };
+  return row;
+}
+
+document.querySelectorAll('.sidebar-toolbar [data-action]').forEach(btn => {
+  btn.addEventListener('click', () => handleSidebarAction(btn.dataset.action));
+});
+async function handleSidebarAction(action){
+  if (!state.connected){ log('connect first (Settings)', 'err'); return; }
+  if (action === 'refresh'){ invalidateTree(); return; }
+  if (action === 'new-file' || action === 'new-folder'){
+    const isFile = action === 'new-file';
+    const base = state.activeFolder ? state.activeFolder + '/' : '';
+    const name = await promptModal(isFile ? 'New file' : 'New folder', 'path relative to root', base);
+    if (!name) return;
+    try{
+      await api('POST', '/api/create', {path:name, type:isFile?'file':'dir'});
+      log('created '+name, 'ok');
+      invalidateTree();
+      if (isFile) openTab(name);
+    }catch(e){ log('create failed: '+e.message, 'err'); }
+    return;
+  }
+  if (action === 'move'){
+    if (state.checked.size === 0){ log('check one or more items in the tree first', 'err'); return; }
+    const dest = await promptModal('Move selected to…', 'destination folder (relative to root)', state.activeFolder);
+    if (dest === null) return;
+    try{
+      const res = await api('POST', '/api/move', {items:[...state.checked], dest});
+      log(`moved ${res.moved.length} item(s)` + (res.errors.length ? `, ${res.errors.length} failed` : ''), res.errors.length?'err':'ok');
+      res.errors.forEach(er => log(`  ${er.item}: ${er.error}`, 'err'));
+      state.checked.clear();
+      invalidateTree();
+    }catch(e){ log('move failed: '+e.message, 'err'); }
+    return;
+  }
+  if (action === 'delete'){
+    if (state.checked.size === 0){ log('check one or more items in the tree first', 'err'); return; }
+    const items = [...state.checked];
+    const ok = await confirmModal('Delete items?', `This permanently deletes:\n${items.join(', ')}`);
+    if (!ok) return;
+    try{
+      const res = await api('POST', '/api/delete', {items});
+      log(`deleted ${res.deleted.length} item(s)` + (res.errors.length ? `, ${res.errors.length} failed` : ''), res.errors.length?'err':'ok');
+      res.errors.forEach(er => log(`  ${er.item}: ${er.error}`, 'err'));
+      items.forEach(p => { state.checked.delete(p); closeTab(p, true); });
+      invalidateTree();
+    }catch(e){ log('delete failed: '+e.message, 'err'); }
+    return;
+  }
+}
+
+/* ============================================================
+   EDITOR (single CodeMirror instance, one Doc per tab)
+   ============================================================ */
+let cmEditor;
+function initEditor(){
+  cmEditor = CodeMirror(document.getElementById('cmHost'), {
+    value: '', lineNumbers: true, styleActiveLine: true, matchBrackets: true,
+    tabSize: 2, indentUnit: 2, theme: 'default', lineWrapping: false,
+    extraKeys: {
+      'Ctrl-S': (cm)=>{ saveCurrentTab(); return false; },
+      'Cmd-S': (cm)=>{ saveCurrentTab(); return false; },
+    }
+  });
+  cmEditor.on('change', () => {
+    const t = getActiveFileTab();
+    if (!t) return;
+    const nowDirty = t.doc.getValue() !== t.originalContent;
+    if (nowDirty !== t.dirty){ t.dirty = nowDirty; renderTabs(); }
+  });
+}
+
+function getActiveFileTab(){
+  return state.tabs.find(t => t.path === state.activeTab) || null;
+}
+
+async function openTab(path, forceRefresh){
+  let tab = state.tabs.find(t => t.path === path);
+  if (tab && !forceRefresh){ activateTab(path); return; }
+  try{
+    const res = await api('GET', '/api/file?path='+encodeURIComponent(path));
+    if (tab){
+      tab.doc.setValue(res.content);
+      tab.originalContent = res.content;
+      tab.dirty = false;
+    } else {
+      const mode = modeFor(path);
+      const doc = new CodeMirror.Doc(res.content, mode || null);
+      tab = { path, doc, originalContent: res.content, dirty: false };
+      state.tabs.push(tab);
+    }
+    activateTab(path);
+  }catch(e){
+    log('open failed: '+e.message, 'err');
+  }
+}
+
+function closeTab(path, silent){
+  const idx = state.tabs.findIndex(t => t.path === path);
+  if (idx === -1) return;
+  const t = state.tabs[idx];
+  if (t.dirty && !silent){
+    if (!confirm(`${path} has unsaved changes. Close without saving?`)) return;
+  }
+  state.tabs.splice(idx, 1);
+  if (state.activeTab === path){
+    const next = state.tabs[idx] || state.tabs[idx-1];
+    activateTab(next ? next.path : (state.tabs.length ? state.tabs[0].path : null));
+  } else {
+    renderTabs();
+  }
+}
+
+function activateTab(path){
+  state.activeTab = path;
+  renderTabs();
+  const editorWrap = document.getElementById('editorWrap');
+  const geminiPanel = document.getElementById('geminiPanel');
+  const emptyState = document.getElementById('emptyState');
+  if (path === '__gemini__'){
+    editorWrap.style.display = 'none';
+    geminiPanel.classList.add('visible');
+    emptyState.style.display = 'none';
+  } else if (path){
+    const tab = getActiveFileTab();
+    geminiPanel.classList.remove('visible');
+    if (!tab){ editorWrap.style.display='none'; emptyState.style.display='flex'; return; }
+    editorWrap.style.display = 'flex';
+    emptyState.style.display = 'none';
+    document.getElementById('toolbarPath').textContent = tab.path;
+    cmEditor.swapDoc(tab.doc);
+    setTimeout(()=>cmEditor.refresh(), 0);
+    applyAiHighlighting();
+  } else {
+    editorWrap.style.display = 'none';
+    geminiPanel.classList.remove('visible');
+    emptyState.style.display = 'flex';
+  }
+}
+
+function renderTabs(){
+  const bar = document.getElementById('tabbar');
+  bar.innerHTML = '';
+  for (const t of state.tabs){
+    const el = document.createElement('div');
+    el.className = 'tab' + (t.path===state.activeTab ? ' active':'');
+    el.title = t.path;
+    const name = document.createElement('span');
+    name.textContent = basename(t.path);
+    el.appendChild(name);
+    if (t.dirty){ const d = document.createElement('span'); d.className='dot'; el.appendChild(d); }
+    const closeBtn = document.createElement('span');
+    closeBtn.className = 'tab-close'; closeBtn.textContent = '×';
+    closeBtn.onclick = (ev) => { ev.stopPropagation(); closeTab(t.path); };
+    el.appendChild(closeBtn);
+    el.onclick = () => activateTab(t.path);
+    bar.appendChild(el);
+  }
+  const g = document.createElement('div');
+  g.className = 'tab gemini-tab' + (state.activeTab === '__gemini__' ? ' active' : '');
+  g.textContent = 'Assistant';
+  g.onclick = () => activateTab('__gemini__');
+  bar.appendChild(g);
+}
+
+async function saveCurrentTab(){
+  const t = getActiveFileTab();
+  if (!t){ return; }
+  const content = t.doc.getValue();
+  try{
+    await api('POST', '/api/file', {path: t.path, content});
+    t.originalContent = content;
+    t.dirty = false;
+    renderTabs();
+    log('saved '+t.path, 'ok');
+  }catch(e){ log('save failed: '+e.message, 'err'); }
+}
+document.getElementById('saveTabBtn').onclick = saveCurrentTab;
+
+/* ---- AI region highlighting inside the editor ("the fence") ---- */
+function applyAiHighlighting(){
+  const t = getActiveFileTab();
+  if (!t) return;
+  const doc = t.doc;
+  if (doc._aiMarks){ doc._aiMarks.forEach(m => doc.removeLineClass(m.line, 'background', m.cls)); }
+  doc._aiMarks = [];
+  const total = doc.lineCount();
+  function markRange(range, cls){
+    const start = range ? Math.max(0, range[0]-1) : 0;
+    const end = range ? Math.min(total-1, range[1]-1) : total-1;
+    for (let i=start; i<=end; i++){ doc.addLineClass(i, 'background', cls); doc._aiMarks.push({line:i, cls}); }
+  }
+  state.gemini.context.filter(c => c.path === t.path).forEach(c => markRange(c.range, 'cm-ai-context'));
+  state.gemini.targets.filter(g => g.path === t.path).forEach(g => markRange(g.range, 'cm-ai-target'));
+}
+
+/* ============================================================
+   GEMINI TAB
+   ============================================================ */
+function currentSelectionRange(){
+  const t = getActiveFileTab();
+  if (!t) return null;
+  const from = cmEditor.getCursor('from'), to = cmEditor.getCursor('to');
+  if (from.line === to.line && from.ch === to.ch) return null; // no selection -> whole file
+  const endLine = (to.ch === 0 && to.line > from.line) ? to.line : to.line + 1;
+  return [from.line+1, endLine];
+}
+
+document.getElementById('addCtxFromEditor').onclick = () => {
+  const t = getActiveFileTab();
+  if (!t){ log('open a file first', 'err'); return; }
+  state.gemini.context.push({id:genId(), path:t.path, range: currentSelectionRange()});
+  renderGeminiLists(); applyAiHighlighting();
+};
+document.getElementById('addTgtFromEditor').onclick = () => {
+  const t = getActiveFileTab();
+  if (!t){ log('open a file first', 'err'); return; }
+  state.gemini.targets.push({id:genId(), path:t.path, range: currentSelectionRange()});
+  renderGeminiLists(); applyAiHighlighting();
+};
+document.getElementById('addCtxBtn').onclick = async () => {
+  const path = await filePickerModal();
+  if (!path) return;
+  state.gemini.context.push({id:genId(), path, range:null});
+  renderGeminiLists(); applyAiHighlighting();
+};
+document.getElementById('addTgtBtn').onclick = async () => {
+  const path = await filePickerModal();
+  if (!path) return;
+  state.gemini.targets.push({id:genId(), path, range:null});
+  renderGeminiLists(); applyAiHighlighting();
+};
+
+function renderGeminiLists(){
+  renderItemList('ctxList', state.gemini.context, 'is-context');
+  renderItemList('tgtList', state.gemini.targets, 'is-target');
+}
+function renderItemList(containerId, arr, cls){
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  if (arr.length === 0){
+    el.innerHTML = '<div class="empty-hint">none added yet</div>';
+    return;
+  }
+  arr.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'ai-item ' + cls;
+    const isAll = !item.range;
+    row.innerHTML = `
+      <button class="rm">×</button>
+      <span class="path">${escapeHtml(item.path)}</span>
+      <label><input type="checkbox" class="all-cb" ${isAll?'checked':''}/> All</label>
+      <input type="number" class="start-in" min="1" placeholder="from" value="${item.range?item.range[0]:''}" ${isAll?'disabled':''}/>
+      <input type="number" class="end-in" min="1" placeholder="to" value="${item.range?item.range[1]:''}" ${isAll?'disabled':''}/>
+    `;
+    row.querySelector('.rm').onclick = () => {
+      const i = arr.indexOf(item); arr.splice(i,1);
+      renderGeminiLists(); applyAiHighlighting();
+    };
+    const allCb = row.querySelector('.all-cb');
+    const startIn = row.querySelector('.start-in');
+    const endIn = row.querySelector('.end-in');
+    function sync(){
+      if (allCb.checked){ item.range = null; startIn.disabled = true; endIn.disabled = true; }
+      else {
+        startIn.disabled = false; endIn.disabled = false;
+        const s = parseInt(startIn.value)||1, e = parseInt(endIn.value)||s;
+        item.range = [s, Math.max(s,e)];
+      }
+      applyAiHighlighting();
+    }
+    allCb.onchange = sync; startIn.onchange = sync; endIn.onchange = sync;
+    el.appendChild(row);
+  });
+}
+
+/* ---- talking to Gemini ---- */
+const SYS_PROMPT = [
+  "You are a precise code-editing assistant embedded in a text editor.",
+  "You are given CONTEXT FILES (read-only, for reference and understanding only — never propose edits for these)",
+  "and EDIT TARGETS, each with a unique id and an exact line range (or 'ALL' for the whole file).",
+  "For every target id you must return exactly one edit object.",
+  "The 'new_content' field must contain ONLY the raw replacement text for that exact range",
+  "(or the full new file if the target is ALL) — no markdown code fences, no commentary, no line-number prefixes.",
+  "Preserve the surrounding code style and indentation unless the instruction says otherwise.",
+  "Make only the changes the instruction asks for. Return valid JSON matching the schema."
+].join(' ');
+
+const RESPONSE_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    explanation: {type:"STRING"},
+    edits: {
+      type:"ARRAY",
+      items: {
+        type:"OBJECT",
+        properties: { id:{type:"STRING"}, new_content:{type:"STRING"} },
+        required: ["id","new_content"]
+      }
+    }
+  },
+  required: ["edits"]
+};
+
+async function resolvePathContent(path){
+  const openT = state.tabs.find(t => t.path === path);
+  if (openT) return openT.doc.getValue();
+  const res = await api('GET', '/api/file?path='+encodeURIComponent(path));
+  return res.content;
+}
+function sliceRange(content, range){
+  if (!range) return content;
+  const lines = content.split('\n');
+  const s = Math.max(1, range[0]) - 1;
+  const e = Math.min(lines.length, range[1]);
+  return lines.slice(s, e).join('\n');
+}
+function applyEditToContent(oldContent, range, newSlice){
+  if (!range) return newSlice;
+  const lines = oldContent.split('\n');
+  const s = Math.max(1, range[0]) - 1;
+  const e = Math.min(lines.length, range[1]);
+  const newLines = newSlice.split('\n');
+  lines.splice(s, e - s, ...newLines);
+  return lines.join('\n');
+}
+function fmtRangeLabel(range){ return range ? `lines ${range[0]}-${range[1]}` : 'ALL'; }
+
+function assembleGeminiText(contents, promptText){
+  let text = 'CONTEXT FILES (read-only reference — do not edit these):\n\n';
+  if (state.gemini.context.length === 0) text += '(none provided)\n\n';
+  for (const c of state.gemini.context){
+    text += `--- FILE: ${c.path} (${fmtRangeLabel(c.range)}) ---\n${sliceRange(contents[c.path]||'', c.range)}\n\n`;
+  }
+  text += 'EDIT TARGETS (produce exactly one edit per id):\n\n';
+  for (const t of state.gemini.targets){
+    text += `--- TARGET id=${t.id} FILE: ${t.path} (${fmtRangeLabel(t.range)}) ---\n${sliceRange(contents[t.path]||'', t.range)}\n\n`;
+  }
+  text += 'USER INSTRUCTION:\n' + promptText;
+  return text;
+}
+
+function setGenerating(on){
+  document.getElementById('generateBtn').disabled = on;
+  document.getElementById('generateBtn').textContent = on ? 'Generating…' : 'Generate';
+}
+
+document.getElementById('generateBtn').onclick = async () => {
+  if (!state.connected){ log('connect first (Settings)', 'err'); return; }
+  if (state.gemini.targets.length === 0){ log('add at least one edit target first', 'err'); return; }
+  if (!state.geminiKeys.length){ log('add at least one Gemini API key in Settings first', 'err'); openSettings(); return; }
+  const model = document.getElementById('geminiModel').value.trim() || 'gemini-2.5-flash';
+  const temp = parseFloat(document.getElementById('geminiTemp').value);
+  const promptText = document.getElementById('geminiPrompt').value.trim();
+  if (!promptText){ log('write a prompt first', 'err'); return; }
+
+  setGenerating(true);
+  try{
+    const paths = uniq([...state.gemini.context.map(c=>c.path), ...state.gemini.targets.map(t=>t.path)]);
+    const contents = {};
+    for (const p of paths){ contents[p] = await resolvePathContent(p); }
+    state.gemini.lastContents = contents;
+
+    const text = assembleGeminiText(contents, promptText);
+    const reqBody = {
+      systemInstruction: {parts:[{text:SYS_PROMPT}]},
+      contents: [{role:'user', parts:[{text}]}],
+      generationConfig: {
+        responseMimeType: 'application/json',
+        responseSchema: RESPONSE_SCHEMA,
+        temperature: isNaN(temp) ? 0.3 : temp,
+      }
+    };
+    const res = await api('POST', '/api/gemini', {apiKeys: state.geminiKeys, model, body: reqBody});
+    const cand = res.data && res.data.candidates && res.data.candidates[0];
+    if (!cand){
+      const reason = res.data && res.data.promptFeedback && res.data.promptFeedback.blockReason;
+      throw new Error('no response from Gemini' + (reason ? ` (blocked: ${reason})` : ''));
+    }
+    const rawText = (cand.content.parts || []).map(p => p.text || '').join('');
+    let parsed;
+    try{ parsed = JSON.parse(rawText); }
+    catch(e){ throw new Error('could not parse Gemini response as JSON'); }
+    state.gemini.results = parsed;
+    renderGeminiResults();
+    log(`generated ${(parsed.edits||[]).length} edit(s)`, 'ok');
+  }catch(e){
+    log('generate failed: ' + e.message, 'err');
+  }finally{
+    setGenerating(false);
+  }
+};
+
+/* ---- diff + apply ---- */
+function diffLines(oldLines, newLines){
+  const n = oldLines.length, m = newLines.length;
+  if (n*m > 400000){
+    const ops = [];
+    oldLines.forEach(l => ops.push({t:'del', l}));
+    newLines.forEach(l => ops.push({t:'add', l}));
+    return ops;
+  }
+  const dp = Array.from({length:n+1}, () => new Int32Array(m+1));
+  for (let i=n-1;i>=0;i--){
+    for (let j=m-1;j>=0;j--){
+      dp[i][j] = oldLines[i]===newLines[j] ? dp[i+1][j+1]+1 : Math.max(dp[i+1][j], dp[i][j+1]);
+    }
+  }
+  const ops = [];
+  let i=0,j=0;
+  while(i<n && j<m){
+    if (oldLines[i]===newLines[j]){ ops.push({t:'eq', l:oldLines[i]}); i++; j++; }
+    else if (dp[i+1][j] >= dp[i][j+1]){ ops.push({t:'del', l:oldLines[i]}); i++; }
+    else { ops.push({t:'add', l:newLines[j]}); j++; }
+  }
+  while(i<n){ ops.push({t:'del', l:oldLines[i]}); i++; }
+  while(j<m){ ops.push({t:'add', l:newLines[j]}); j++; }
+  return ops;
+}
+
+function renderGeminiResults(){
+  const wrap = document.getElementById('geminiResults');
+  wrap.innerHTML = '';
+  const parsed = state.gemini.results;
+  if (!parsed) return;
+
+  if (parsed.explanation){
+    const ex = document.createElement('div');
+    ex.className = 'gemini-explanation';
+    ex.textContent = parsed.explanation;
+    wrap.appendChild(ex);
+  }
+
+  const applyAllBtn = document.createElement('button');
+  applyAllBtn.className = 'btn-user';
+  applyAllBtn.textContent = 'Apply all';
+  applyAllBtn.style.marginBottom = '12px';
+  applyAllBtn.onclick = () => {
+    wrap.querySelectorAll('.diff-card .apply-btn:not(:disabled)').forEach(b => b.click());
+  };
+  wrap.appendChild(applyAllBtn);
+
+  const edits = parsed.edits || [];
+  for (const target of state.gemini.targets){
+    const edit = edits.find(e => e.id === target.id);
+    const card = document.createElement('div');
+    card.className = 'diff-card';
+    const head = document.createElement('div');
+    head.className = 'diff-head';
+    head.innerHTML = `<span class="diff-path">${escapeHtml(target.path)} (${fmtRangeLabel(target.range)})</span>`;
+    if (!edit){
+      head.innerHTML += `<span class="applied-badge" style="color:var(--danger)">no edit returned</span>`;
+      card.appendChild(head);
+      wrap.appendChild(card);
+      continue;
+    }
+    const applyBtn = document.createElement('button');
+    applyBtn.className = 'apply-btn btn-user';
+    applyBtn.textContent = 'Apply';
+    const discardBtn = document.createElement('button');
+    discardBtn.className = 'btn-danger';
+    discardBtn.textContent = 'Discard';
+    head.appendChild(applyBtn);
+    head.appendChild(discardBtn);
+    card.appendChild(head);
+
+    const oldFull = (state.gemini.lastContents && state.gemini.lastContents[target.path]) || '';
+    const oldSlice = sliceRange(oldFull, target.range);
+    const body = document.createElement('pre');
+    body.className = 'diff-body';
+    const ops = diffLines(oldSlice.split('\n'), edit.new_content.split('\n'));
+    for (const op of ops){
+      const line = document.createElement('div');
+      line.className = 'diff-line diff-' + op.t;
+      const prefix = op.t==='add' ? '+ ' : op.t==='del' ? '- ' : '  ';
+      line.textContent = prefix + op.l;
+      body.appendChild(line);
+    }
+    card.appendChild(body);
+    wrap.appendChild(card);
+
+    applyBtn.onclick = async () => {
+      try{
+        const newFull = applyEditToContent(oldFull, target.range, edit.new_content);
+        await api('POST', '/api/file', {path: target.path, content: newFull});
+        state.gemini.lastContents[target.path] = newFull;
+        await openTab(target.path, true);
+        applyBtn.disabled = true; discardBtn.disabled = true;
+        head.appendChild(Object.assign(document.createElement('span'), {className:'applied-badge', textContent:'✓ applied'}));
+        log('applied edit to ' + target.path, 'ok');
+      }catch(e){ log('apply failed: ' + e.message, 'err'); }
+    };
+    discardBtn.onclick = () => {
+      applyBtn.disabled = true; discardBtn.disabled = true;
+      head.appendChild(Object.assign(document.createElement('span'), {className:'applied-badge', style:'color:var(--text-faint)', textContent:'discarded'}));
+    };
+  }
+}
+
+/* ============================================================
+   GIT
+   ============================================================ */
+document.getElementById('gitBtn').onclick = async () => {
+  if (!state.connected){ log('connect first (Settings)', 'err'); return; }
+  const path = document.getElementById('gitPath').value.trim();
+  const message = document.getElementById('gitMsg').value.trim();
+  const btn = document.getElementById('gitBtn');
+  btn.disabled = true; btn.textContent = 'Working…';
+  try{
+    const res = await api('POST', '/api/git', {path, message});
+    res.steps.forEach(s => {
+      log(`${s.cmd} → exit ${s.code}`, s.code===0 ? 'ok' : 'err');
+      if (s.out) log('  ' + s.out.split('\n').join('\n  '));
+      if (s.err) log('  ' + s.err.split('\n').join('\n  '), s.code===0?undefined:'err');
+    });
+    log(res.ok ? 'commit & push complete' : 'commit/push finished with errors', res.ok?'ok':'err');
+  }catch(e){ log('git failed: ' + e.message, 'err'); }
+  finally{ btn.disabled = false; btn.textContent = '⇪ Commit && Push'; }
+};
+
+/* ============================================================
+   MOBILE SIDEBAR TOGGLE
+   ============================================================ */
+document.getElementById('hamburger').onclick = () => document.getElementById('sidebar').classList.toggle('open');
+
+/* ============================================================
+   BOOT
+   ============================================================ */
+async function boot(){
+  initEditor();
+  renderTabs();
+  renderGeminiLists();
+  if (!state.token){
+    log('no server token set yet — opening Settings', 'err');
+    openSettings();
+  } else {
+    if (await checkConnection()) renderTree();
+  }
+}
+boot();
+
+})();
+</script>
+</body>
+</html>
+
+

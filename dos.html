@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<title>DOS — decision / implementation tracker</title>
+<style>
+  :root{
+    --bg:#0D1017;
+    --bg-elevated:#141822;
+    --surface:#171C26;
+    --surface-hover:#1D2330;
+    --border:#242B38;
+    --border-strong:#333C4D;
+    --text:#E9ECF2;
+    --text-muted:#8891A3;
+    --text-faint:#5B6376;
+    --accent:#9C8CFB;
+    --accent-text:#100C1F;
+    --danger:#E2574C;
+    --danger-bg:rgba(226,87,76,0.12);
+
+    --ds-color:#E8A33D;
+
+    --s0:#5B6472;
+    --s1:#E8A33D;
+    --s2:#E2574C;
+    --s3:#4FA3E3;
+    --s4:#4CAF7D;
+
+    --radius-sm:8px;
+    --radius-md:14px;
+    --radius-lg:20px;
+    --row-h:46px;
+    --safe-b: env(safe-area-inset-bottom, 0px);
+    --safe-t: env(safe-area-inset-top, 0px);
+  }
+
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:15px;
+    -webkit-font-smoothing:antialiased;
+    overscroll-behavior-y:none;
+  }
+  .mono{
+    font-family:ui-monospace,"SF Mono","Menlo","Consolas",monospace;
+  }
+  button{
+    font-family:inherit;
+    color:inherit;
+    background:none;
+    border:none;
+    cursor:pointer;
+  }
+  button:focus-visible, input:focus-visible, textarea:focus-visible{
+    outline:2px solid var(--accent);
+    outline-offset:2px;
+  }
+  input,textarea{
+    font-family:inherit;
+    color:var(--text);
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius-sm);
+  }
+
+  #app{
+    max-width:520px;
+    margin:0 auto;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    background:var(--bg);
+  }
+
+  header{
+    position:sticky; top:0; z-index:10;
+    background:var(--bg);
+    padding-top:calc(10px + var(--safe-t));
+    border-bottom:1px solid var(--border);
+  }
+  .topbar-row{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 14px 8px;
+  }
+  .icon-btn{
+    width:34px; height:34px;
+    display:flex; align-items:center; justify-content:center;
+    border-radius:10px;
+    font-size:18px;
+    color:var(--text-muted);
+  }
+  .icon-btn:active{ background:var(--surface-hover); }
+  .icon-btn.active-mode{ background:var(--surface-hover); color:var(--accent); }
+  .brand{
+    font-weight:700;
+    font-size:15px;
+    letter-spacing:0.5px;
+    color:var(--text);
+  }
+  .brand small{
+    display:block;
+    font-weight:400;
+    font-size:10.5px;
+    color:var(--text-faint);
+    letter-spacing:0.3px;
+    margin-top:1px;
+  }
+  .topbar-actions{ display:flex; gap:6px; align-items:center; }
+  #addBtn{
+    width:34px; height:34px;
+    border-radius:10px;
+    background:var(--accent);
+    color:var(--accent-text);
+    font-size:20px;
+    font-weight:600;
+    display:flex; align-items:center; justify-content:center;
+    line-height:1;
+  }
+  #addBtn:active{ opacity:0.85; }
+
+  #breadcrumb{
+    display:flex;
+    align-items:center;
+    gap:2px;
+    overflow-x:auto;
+    scrollbar-width:none;
+    padding:0 14px 8px;
+    white-space:nowrap;
+  }
+  #breadcrumb::-webkit-scrollbar{ display:none; }
+  .crumb{
+    font-size:12.5px;
+    color:var(--text-muted);
+    padding:4px 2px;
+    border-radius:6px;
+    flex:0 0 auto;
+  }
+  .crumb.current{ color:var(--text); font-weight:600; }
+  .crumb-sep{ color:var(--text-faint); font-size:12px; }
+
+  .subtabs{
+    display:flex;
+    background:var(--surface);
+    border-top:1px solid var(--border);
+    border-bottom:1px solid var(--border);
+  }
+  .subtab{
+    flex:1;
+    text-align:center;
+    padding:9px 0;
+    font-size:12.5px;
+    font-weight:600;
+    color:var(--text-muted);
+    border-bottom:2px solid transparent;
+  }
+  .subtab.active{
+    color:var(--text);
+    border-bottom-color:var(--accent);
+    background:var(--bg);
+  }
+
+  main{ flex:1; display:flex; flex-direction:column; padding-bottom:80px; }
+
+  .row{
+    display:flex;
+    align-items:center;
+    height:var(--row-h);
+    padding:0 8px 0 14px;
+    border-bottom:1px solid var(--border);
+    gap:10px;
+  }
+  .row:active{ background:var(--surface-hover); }
+
+  .checkbox-wrap{
+    flex:0 0 auto;
+    width:22px; height:22px;
+    border-radius:6px;
+    border:1.5px solid var(--border-strong);
+    display:flex; align-items:center; justify-content:center;
+    background:var(--surface);
+  }
+  .checkbox-wrap.checked{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:var(--accent-text);
+    font-weight:700;
+    font-size:13px;
+  }
+
+  .chip{
+    flex:0 0 auto;
+    width:30px; height:30px;
+    border-radius:9px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:12.5px;
+    font-weight:700;
+    color:#0B0D12;
+  }
+  .row-kind{
+    flex:0 0 auto;
+    font-size:12px;
+    color:var(--text-faint);
+    width:14px;
+    text-align:center;
+  }
+  .row-main{
+    flex:1;
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+  }
+  .row-label{
+    font-size:14px;
+    font-weight:500;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .row-meta{
+    font-size:11px;
+    color:var(--text-faint);
+    margin-top:1px;
+  }
+  .kebab{
+    flex:0 0 auto;
+    width:32px; height:32px;
+    border-radius:8px;
+    display:flex; align-items:center; justify-content:center;
+    color:var(--text-faint);
+    font-size:17px;
+  }
+  .kebab:active{ background:var(--surface-hover); }
+
+  .batch-bar{
+    position:fixed; bottom:0; left:0; right:0;
+    max-width:520px; margin:0 auto;
+    background:var(--bg-elevated);
+    border-top:1px solid var(--border);
+    padding:12px 16px calc(14px + var(--safe-b));
+    display:flex; align-items:center; justify-content:space-between;
+    z-index:15;
+    box-shadow:0 -4px 16px rgba(0,0,0,0.4);
+    transform:translateY(100%);
+    transition:transform .2s ease;
+  }
+  .batch-bar.open{ transform:translateY(0); }
+
+  .empty{
+    padding:60px 30px 30px;
+    text-align:center;
+  }
+  .empty-title{ font-size:15px; font-weight:600; margin-bottom:6px; }
+  .empty-sub{ font-size:13px; color:var(--text-muted); margin-bottom:20px; line-height:1.5; }
+  .empty-actions{ display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+  .btn{
+    padding:9px 14px;
+    border-radius:10px;
+    font-size:13px;
+    font-weight:600;
+  }
+  .btn-primary{ background:var(--accent); color:var(--accent-text); }
+  .btn-ghost{ background:var(--surface); border:1px solid var(--border); color:var(--text); }
+  .btn-danger{ background:var(--danger-bg); color:var(--danger); }
+  .btn:active{ opacity:0.85; }
+
+  .overlay{
+    position:fixed; inset:0;
+    background:rgba(6,7,11,0.6);
+    opacity:0; pointer-events:none;
+    transition:opacity .2s ease;
+    z-index:20;
+  }
+  .overlay.open{ opacity:1; pointer-events:auto; }
+
+  .sheet{
+    position:fixed; left:0; right:0; bottom:0;
+    max-width:520px; margin:0 auto;
+    background:var(--bg-elevated);
+    border:1px solid var(--border);
+    border-bottom:none;
+    border-radius:18px 18px 0 0;
+    padding:14px 16px calc(18px + var(--safe-b));
+    transform:translateY(100%);
+    transition:transform .22s ease;
+    z-index:21;
+    max-height:82vh;
+    overflow-y:auto;
+  }
+  .sheet.open{ transform:translateY(0); }
+  .sheet-handle{
+    width:36px; height:4px; border-radius:2px;
+    background:var(--border-strong);
+    margin:0 auto 14px;
+  }
+  .sheet-title{ font-size:15px; font-weight:700; margin-bottom:2px; }
+  .sheet-sub{ font-size:12.5px; color:var(--text-muted); margin-bottom:16px; }
+
+  .segmented{
+    display:flex; gap:6px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:3px;
+    margin-bottom:16px;
+  }
+  .segmented button{
+    flex:1; padding:8px 0; border-radius:8px;
+    font-size:12px; font-weight:600; color:var(--text-muted);
+  }
+  .segmented button.active{ background:var(--accent); color:var(--accent-text); }
+
+  .field-label{
+    font-size:11.5px; font-weight:700; letter-spacing:0.4px;
+    text-transform:uppercase; color:var(--text-faint);
+    margin-bottom:7px;
+  }
+  #nameInput{
+    width:100%; padding:11px 12px;
+    font-size:15px; margin-bottom:4px;
+  }
+  .input-hint{ font-size:11px; color:var(--text-faint); margin-bottom:16px; }
+
+  .status-grid{
+    display:flex; gap:6px; margin-bottom:16px;
+  }
+  .status-opt{
+    flex:1;
+    padding:9px 2px 7px;
+    border-radius:10px;
+    border:1.5px solid var(--border);
+    text-align:center;
+  }
+  .status-opt .d{ font-size:14px; font-weight:700; font-family:ui-monospace,monospace; }
+  .status-opt .l{ font-size:9px; color:var(--text-faint); margin-top:2px; }
+  .status-opt.active{ border-color:var(--opt-color, var(--accent)); background:color-mix(in srgb, var(--opt-color, var(--accent)) 16%, transparent); }
+
+  .second-row{
+    display:flex; gap:6px; margin-bottom:6px;
+  }
+  .second-opt{
+    flex:1; padding:9px 0;
+    border-radius:9px;
+    border:1.5px solid var(--border);
+    text-align:center;
+    font-size:13px; font-weight:700;
+    font-family:ui-monospace,monospace;
+    color:var(--text-muted);
+  }
+  .second-opt.active{ border-color:var(--accent); color:var(--text); background:rgba(156,140,251,0.14); }
+  .second-hint{ font-size:11px; color:var(--text-faint); margin-bottom:16px; }
+
+  .sheet-actions{ display:flex; gap:10px; margin-top:4px; }
+  .sheet-actions .btn{ flex:1; padding:12px 0; font-size:14px; }
+
+  .action-item{
+    display:flex; align-items:center; gap:12px;
+    padding:13px 4px;
+    font-size:14.5px;
+    border-bottom:1px solid var(--border);
+  }
+  .action-item:last-child{ border-bottom:none; }
+  .action-item.danger{ color:var(--danger); }
+
+  #editorView{
+    position:fixed; inset:0;
+    max-width:520px; margin:0 auto;
+    background:var(--bg);
+    transform:translateX(100%);
+    transition:transform .22s ease;
+    z-index:22;
+    display:flex; flex-direction:column;
+  }
+  #editorView.open{ transform:translateX(0); }
+  .editor-head{
+    display:flex; align-items:center; gap:10px;
+    padding:calc(10px + var(--safe-t)) 10px 10px 6px;
+    border-bottom:1px solid var(--border);
+  }
+  .editor-chip-wrap{ display:flex; align-items:center; gap:8px; flex:1; min-width:0; }
+  .editor-label{ font-size:14.5px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #editorSaved{ font-size:11px; color:var(--s4); opacity:0; transition:opacity .3s ease; margin-right:4px; }
+  
+  #editorTextarea{
+    flex:1; width:100%;
+    border:none; border-radius:0;
+    padding:16px;
+    font-size:14px; line-height:1.6;
+    background:var(--bg);
+    white-space:pre;
+    overflow-x:auto;
+    word-wrap:normal;
+  }
+
+  .ds-editor-container{
+    flex:1; display:flex; flex-direction:column; padding:12px;
+  }
+  .ds-textarea{
+    flex:1; width:100%; resize:none;
+    padding:14px; font-size:14px; line-height:1.6;
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm);
+    white-space:pre;
+    overflow-x:auto;
+    word-wrap:normal;
+  }
+  .ds-saved-indicator{
+    font-size:11px; color:var(--s4); opacity:0; transition:opacity .3s ease; text-align:right; margin-top:6px; margin-right:4px;
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <header>
+    <div class="topbar-row">
+      <button class="icon-btn" id="menuBtn" aria-label="Menu">⋯</button>
+      <div class="brand" style="text-align:center;">DOS<small>decision / implementation codes</small></div>
+      <div class="topbar-actions">
+        <button class="icon-btn" id="selectModeBtn" aria-label="Select mode" title="Select multiple">☑</button>
+        <button id="addBtn" aria-label="Create">+</button>
+      </div>
+    </div>
+    <nav id="breadcrumb"></nav>
+    <div class="subtabs" id="subTabs">
+      <button class="subtab active" data-subtab="items">📁 Items</button>
+      <button class="subtab" data-subtab="ds">📋 ds.txt</button>
+      <button class="subtab" data-subtab="stats">📊 Statistics</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="browseView" style="flex:1; display:flex; flex-direction:column;"></div>
+  </main>
+</div>
+
+<div class="batch-bar" id="batchBar">
+  <div style="font-size:13.5px; font-weight:600;"><span id="batchCount">0</span> selected</div>
+  <div style="display:flex; gap:8px;">
+    <button class="btn btn-ghost" id="batchMoveBtn">Move...</button>
+    <button class="btn btn-danger" id="batchDeleteBtn">Delete</button>
+    <button class="btn btn-ghost" id="batchCancelBtn">Cancel</button>
+  </div>
+</div>
+
+<div class="overlay" id="overlay"></div>
+
+<div class="sheet" id="createSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">New item</div>
+  <div class="sheet-sub" id="createSheetSub">Added inside the current folder</div>
+
+  <div class="segmented" id="createKindSeg">
+    <button data-kind="folder" class="active">Folder</button>
+    <button data-kind="problem">Problem</button>
+  </div>
+
+  <div class="field-label">Name</div>
+  <input id="nameInput" type="text" placeholder="lowercase name (a-z, 0-9, _, -)" autocomplete="off" autocapitalize="none" spellcheck="false">
+  <div class="input-hint">Only lowercase letters, numbers, hyphens, and underscores allowed.</div>
+
+  <div id="createStatusSection">
+    <div class="field-label">Status</div>
+    <div class="status-grid" id="createStatusGrid"></div>
+    <div class="field-label" id="createSecondLabel">Priority (0–4)</div>
+    <div class="second-row" id="createSecondRow"></div>
+    <div class="second-hint">0 = lowest · 4 = highest</div>
+  </div>
+
+  <div class="sheet-actions">
+    <button class="btn btn-ghost" id="createCancel">Cancel</button>
+    <button class="btn btn-primary" id="createConfirm">Create</button>
+  </div>
+</div>
+
+<div class="sheet" id="renumberSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Renumber</div>
+  <div class="sheet-sub" id="renumberSheetSub"></div>
+
+  <div class="field-label">Status</div>
+  <div class="status-grid" id="renumberStatusGrid"></div>
+
+  <div class="field-label" id="renumberSecondLabel">Priority (0–4)</div>
+  <div class="second-row" id="renumberSecondRow"></div>
+  <div class="second-hint">0 = lowest · 4 = highest</div>
+
+  <div class="sheet-actions">
+    <button class="btn btn-ghost" id="renumberCancel">Cancel</button>
+    <button class="btn btn-primary" id="renumberConfirm">Apply</button>
+  </div>
+</div>
+
+<div class="sheet" id="renameSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Rename</div>
+  <div class="sheet-sub" id="renameSheetSub"></div>
+  <div class="field-label">Name</div>
+  <input id="renameInput" type="text" placeholder="lowercase name" autocomplete="off" autocapitalize="none" spellcheck="false" style="width:100%; padding:11px 12px; font-size:15px; margin-bottom:4px;">
+  <div class="input-hint">Only lowercase letters, numbers, hyphens, and underscores allowed.</div>
+  <div class="sheet-actions">
+    <button class="btn btn-ghost" id="renameCancel">Cancel</button>
+    <button class="btn btn-primary" id="renameConfirm">Save</button>
+  </div>
+</div>
+
+<div class="sheet" id="actionSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="actionSheetTitle">Item</div>
+  <div style="margin-top:8px;">
+    <button class="action-item" id="actionMove">Move...</button>
+    <button class="action-item" id="actionRenumber">Renumber</button>
+    <button class="action-item" id="actionRename">Rename</button>
+    <button class="action-item danger" id="actionDelete">Delete</button>
+  </div>
+  <div class="sheet-actions" style="margin-top:10px;">
+    <button class="btn btn-ghost" id="actionCancel" style="flex:1;">Cancel</button>
+  </div>
+</div>
+
+<div class="sheet" id="moveSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Move item(s)</div>
+  <div class="sheet-sub" id="moveSheetSub">Select destination folder</div>
+  <div id="moveFolderTree" style="max-height:220px; overflow-y:auto; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px; margin-bottom:16px;"></div>
+  <div class="sheet-actions">
+    <button class="btn btn-ghost" id="moveCancel">Cancel</button>
+    <button class="btn btn-primary" id="moveConfirm">Move here</button>
+  </div>
+</div>
+
+<div class="sheet" id="confirmSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="confirmTitle">Delete this item?</div>
+  <div class="sheet-sub" id="confirmSub">This can't be undone.</div>
+  <div class="sheet-actions">
+    <button class="btn btn-ghost" id="confirmCancel">Cancel</button>
+    <button class="btn btn-danger" id="confirmDelete">Delete</button>
+  </div>
+</div>
+
+<div class="sheet" id="menuSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">GitHub & Legend</div>
+  <div style="margin: 14px 0 20px;">
+    <button class="btn btn-primary" id="syncGithubBtn" style="width:100%; padding:12px;">☁️ Save / Sync to GitHub</button>
+  </div>
+  <div class="field-label" style="margin-bottom:10px;">Status Legend</div>
+  <div id="legendList" style="margin-bottom:6px;"></div>
+  <div class="sheet-actions" style="margin-top:16px;">
+    <button class="btn btn-ghost" id="menuClose" style="flex:1;">Close</button>
+  </div>
+</div>
+
+<div id="editorView">
+  <div class="editor-head">
+    <button class="icon-btn" id="editorBack" aria-label="Back">←</button>
+    <div class="editor-chip-wrap">
+      <div class="chip mono" id="editorChip">32</div>
+      <div class="row-main" style="min-width:0;">
+        <div class="editor-label" id="editorLabel">file.txt</div>
+      </div>
+    </div>
+    <span id="editorSaved">Saved</span>
+    <button class="icon-btn" id="editorKebab" aria-label="More">⋯</button>
+  </div>
+  <textarea id="editorTextarea" placeholder="Write problem code or notes here..." spellcheck="false"></textarea>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var STATUS = {
+    0:{name:"decision impossible", short:"Dead", var:"--s0"},
+    1:{name:"decision possible", short:"Open", var:"--s1"},
+    2:{name:"implementation impossible", short:"Blocked", var:"--s2"},
+    3:{name:"implementation possible", short:"Ready", var:"--s3"},
+    4:{name:"implemented", short:"Done", var:"--s4"}
+  };
+  var CONF_STATUSES = {4:true};
+
+  var tree = null;
+  var path = [];
+  var activeSubTab = "items";
+  var createKind = "folder";
+  var createStatus = 3, createSecond = 2;
+  var renumberStatus = 0, renumberSecond = 0;
+  var actionTarget = null;
+  var editorNode = null;
+  var saveTimer = null;
+  var dsSaveTimer = null;
+
+  var isSelectMode = false;
+  var selectedIds = {};
+  var selectedDestPath = [];
+
+  var el = function(id){ return document.getElementById(id); };
+  var colorVar = function(status){ return "var(" + STATUS[status].var + ")"; };
+
+  function sanitizeInput(inputEl){
+    inputEl.addEventListener("input", function(){
+      var start = this.selectionStart;
+      var cleaned = this.value.toLowerCase().replace(/[^a-z0-9_\-]/g, '');
+      if(this.value !== cleaned){
+        this.value = cleaned;
+        this.selectionStart = this.selectionEnd = start;
+      }
+    });
+  }
+  sanitizeInput(el("nameInput"));
+  sanitizeInput(el("renameInput"));
+
+  function enableTabKey(ta){
+    ta.addEventListener("keydown", function(e){
+      if(e.key === "Tab"){
+        e.preventDefault();
+        var start = this.selectionStart;
+        var end = this.selectionEnd;
+        this.value = this.value.substring(0, start) + "\t" + this.value.substring(end);
+        this.selectionStart = this.selectionEnd = start + 1;
+        this.dispatchEvent(new Event("input"));
+      }
+    });
+  }
+
+  function apiGet(url){
+    return fetch(url).then(function(r){
+      if(!r.ok) return r.json().then(function(e){ throw new Error(e.error || r.statusText); });
+      return r.json();
+    });
+  }
+  function apiPost(url, body){
+    return fetch(url, {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(body)
+    }).then(function(r){
+      return r.json().then(function(data){
+        if(!r.ok) throw new Error(data.error || r.statusText);
+        return data;
+      });
+    });
+  }
+
+  function loadTree(){
+    return apiGet("/api/tree").then(function(data){ tree = data; });
+  }
+  function reloadTree(){
+    return apiGet("/api/tree").then(function(data){ tree = data; });
+  }
+
+  function currentNode(){
+    var node = tree;
+    for(var i=0; i<path.length; i++){
+      var found = null;
+      for(var j=0; j<node.children.length; j++){
+        if(node.children[j].label === path[i]){ found = node.children[j]; break; }
+      }
+      if(!found) return null;
+      node = found;
+    }
+    return node;
+  }
+
+  function createNode(kind, label, status, second){
+    var clean = label.trim().toLowerCase();
+    if(!clean) return Promise.reject(new Error("Name is required."));
+    return apiPost("/api/node/create", {parentPath: path, kind: kind, name: clean, status: status, second: second})
+      .then(reloadTree);
+  }
+
+  function renumberNode(node, status, second){
+    return apiPost("/api/node/renumber", {path: path.concat([node.label]), status: status, second: second})
+      .then(reloadTree);
+  }
+
+  function renameNode(node, newName){
+    return apiPost("/api/node/rename", {path: path.concat([node.label]), newName: newName})
+      .then(reloadTree);
+  }
+
+  function openRenameSheet(node){
+    actionTarget = node;
+    el("renameSheetSub").textContent = "\u201c" + node.label + "\u201d";
+    el("renameInput").value = node.label;
+    openSheet(el("renameSheet"));
+    setTimeout(function(){ el("renameInput").focus(); el("renameInput").select(); }, 260);
+  }
+
+  el("renameCancel").addEventListener("click", closeSheet);
+  el("renameConfirm").addEventListener("click", function(){
+    if(!actionTarget) return;
+    var target = actionTarget;
+    var newName = el("renameInput").value.trim().toLowerCase();
+    if(!newName){ alert("Name is required."); return; }
+    var wasEditing = editorNode && editorNode === target;
+    renameNode(target, newName).then(function(){
+      closeSheet();
+      if(wasEditing){
+        editorNode.label = newName;
+        renderEditorHead();
+      }
+      renderBrowse();
+    }).catch(function(err){ alert(err.message); });
+  });
+
+  function deleteNode(node){
+    return apiPost("/api/node/delete", {path: path.concat([node.label])}).then(reloadTree);
+  }
+
+  function saveNodeContent(node, content){
+    return apiPost("/api/node/content", {path: path.concat([node.label]), content: content});
+  }
+
+  function saveFolderDs(content){
+    return apiPost("/api/folder/ds", {path: path, content: content});
+  }
+
+  function pathNodes(){
+    var nodes = [tree];
+    var cur = tree;
+    for(var i=0; i<path.length; i++){
+      cur = cur.children.filter(function(c){ return c.label === path[i]; })[0];
+      if(cur) nodes.push(cur);
+    }
+    return nodes;
+  }
+
+  function renderBreadcrumb(){
+    var nodes = pathNodes();
+    var html = "";
+    nodes.forEach(function(n, i){
+      if(i>0) html += '<span class="crumb-sep mono">/</span>';
+      var isLast = i === nodes.length - 1;
+      html += '<button class="crumb mono' + (isLast? ' current':'') + '" data-idx="' + (i-1) + '">' + escapeHtml(n.label) + '</button>';
+    });
+    el("breadcrumb").innerHTML = html;
+    Array.prototype.forEach.call(el("breadcrumb").querySelectorAll(".crumb"), function(btn){
+      btn.addEventListener("click", function(){
+        var idx = parseInt(btn.getAttribute("data-idx"), 10);
+        path = idx < 0 ? [] : path.slice(0, idx+1);
+        activeSubTab = "items";
+        isSelectMode = false;
+        selectedIds = {};
+        updateBatchBar();
+        renderBreadcrumb();
+        renderBrowse();
+      });
+    });
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+
+  function renderSubTabs(){
+    var subTabsEl = el("subTabs");
+    subTabsEl.hidden = false;
+    Array.prototype.forEach.call(subTabsEl.querySelectorAll(".subtab"), function(btn){
+      var st = btn.getAttribute("data-subtab");
+      btn.classList.toggle("active", st === activeSubTab);
+    });
+  }
+
+  function getSubtreeStats(node) {
+    var stats = {
+      folders: 0,
+      problems: 0,
+      total: 0,
+      statusCounts: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0 },
+      confCounts: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0 },
+      confSum: 0,
+      confTotal: 0
+    };
+    function walk(n) {
+      if (!n.children) return;
+      n.children.forEach(function(child) {
+        if (child.kind === "folder") stats.folders++;
+        else stats.problems++;
+        stats.total++;
+        var s = child.status;
+        if (stats.statusCounts[s] !== undefined) stats.statusCounts[s]++;
+        if (s === 4) {
+          var c = child.second;
+          if (stats.confCounts[c] !== undefined) stats.confCounts[c]++;
+          stats.confSum += c;
+          stats.confTotal++;
+        }
+        if (child.kind === "folder") walk(child);
+      });
+    }
+    walk(node);
+    return stats;
+  }
+
+  function statRow(label, count, colorVarName){
+    return '<div style="display:flex; align-items:center; justify-content:space-between; font-size:13.5px;">' +
+      '<div style="display:flex; align-items:center; gap:8px;">' +
+        '<div style="width:8px; height:8px; border-radius:50%; background:var(' + colorVarName + ');"></div>' +
+        '<span>' + label + '</span>' +
+      '</div>' +
+      '<span style="font-family:ui-monospace,monospace; font-weight:600;">' + count + '</span>' +
+    '</div>';
+  }
+
+  function confRow(label, count){
+    return '<div style="display:flex; align-items:center; justify-content:space-between; font-size:13px; color:var(--text-muted);">' +
+      '<span>' + label + '</span>' +
+      '<span style="font-family:ui-monospace,monospace; font-weight:600; color:var(--text);">' + count + '</span>' +
+    '</div>';
+  }
+
+  function renderBrowse(){
+    renderSubTabs();
+    var node = currentNode();
+    var host = el("browseView");
+    
+    if(activeSubTab === "ds"){
+      host.innerHTML =
+        '<div class="ds-editor-container">' +
+          '<div style="font-size:12px; color:var(--text-faint); margin-bottom:8px;">Folder Specification (ds.txt) for ' + escapeHtml(node.label) + '</div>' +
+          '<textarea class="ds-textarea mono" id="dsTextarea" placeholder="Describe this folder, goals, requirements, notes..." spellcheck="false">' + escapeHtml(node.ds_content || "") + '</textarea>' +
+          '<div class="ds-saved-indicator" id="dsSaved">Saved</div>' +
+        '</div>';
+        
+      var dsTa = el("dsTextarea");
+      enableTabKey(dsTa);
+      dsTa.addEventListener("input", function(){
+        var content = dsTa.value;
+        node.ds_content = content;
+        clearTimeout(dsSaveTimer);
+        dsSaveTimer = setTimeout(function(){
+          saveFolderDs(content).then(function(){
+            var indicator = el("dsSaved");
+            if(indicator){
+              indicator.style.opacity = "1";
+              setTimeout(function(){ indicator.style.opacity = "0"; }, 900);
+            }
+          });
+        }, 500);
+      });
+      return;
+    }
+
+    if(activeSubTab === "stats"){
+      var stats = getSubtreeStats(node);
+      var doneCount = stats.statusCounts[4];
+      var donePercent = stats.total > 0 ? ((doneCount / stats.total) * 100).toFixed(1) : 0;
+      var avgConf = stats.confTotal > 0 ? (stats.confSum / stats.confTotal).toFixed(2) : "0.00";
+
+      host.innerHTML =
+        '<div style="padding:16px; display:flex; flex-direction:column; gap:14px;">' +
+          '<div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:16px;">' +
+            '<div style="font-size:12px; font-weight:700; text-transform:uppercase; color:var(--text-faint); margin-bottom:8px;">Completion Overview</div>' +
+            '<div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:12px;">' +
+              '<div style="font-size:28px; font-weight:700; font-family:ui-monospace,monospace;">' + donePercent + '%</div>' +
+              '<div style="font-size:13px; color:var(--text-muted);">' + doneCount + ' of ' + stats.total + ' items done</div>' +
+            '</div>' +
+            '<div style="background:var(--border); height:6px; border-radius:3px; overflow:hidden;">' +
+              '<div style="background:var(--s4); width:' + donePercent + '%; height:100%;"></div>' +
+            '</div>' +
+            '<div style="display:flex; justify-content:space-between; margin-top:10px; font-size:12px; color:var(--text-faint);">' +
+              '<span>📁 ' + stats.folders + ' folders</span>' +
+              '<span>• ' + stats.problems + ' problems</span>' +
+            '</div>' +
+          '</div>' +
+          '<div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:16px;">' +
+            '<div style="font-size:12px; font-weight:700; text-transform:uppercase; color:var(--text-faint); margin-bottom:12px;">Status Breakdown</div>' +
+            '<div style="display:flex; flex-direction:column; gap:8px;">' +
+              statRow('3 · Ready (IP)', stats.statusCounts[3], '--s3') +
+              statRow('2 · Blocked (II)', stats.statusCounts[2], '--s2') +
+              statRow('1 · Open (DP)', stats.statusCounts[1], '--s1') +
+              statRow('0 · Dead (DI)', stats.statusCounts[0], '--s0') +
+              statRow('4 · Done (ID)', stats.statusCounts[4], '--s4') +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      return;
+    }
+
+    if(!node || !node.children || node.children.length === 0){
+      host.innerHTML =
+        '<div class="empty">' +
+          '<div class="empty-title">Nothing here yet</div>' +
+          '<div class="empty-sub">Create a subfolder or a problem file.</div>' +
+          '<div class="empty-actions">' +
+            '<button class="btn btn-ghost" id="emptyFolder">+ Folder</button>' +
+            '<button class="btn btn-primary" id="emptyProblem">+ Problem</button>' +
+          '</div>' +
+        '</div>';
+      el("emptyFolder").addEventListener("click", function(){ openCreateSheet("folder"); });
+      el("emptyProblem").addEventListener("click", function(){ openCreateSheet("problem"); });
+      return;
+    }
+
+    var sorted = node.children.slice().sort(function(a, b){
+      var statusOrder = { 3: 0, 2: 1, 1: 2, 0: 3, 4: 4 };
+      var rankA = statusOrder[a.status] !== undefined ? statusOrder[a.status] : 5;
+      var rankB = statusOrder[b.status] !== undefined ? statusOrder[b.status] : 5;
+      if(rankA !== rankB) return rankA - rankB;
+      if(a.status === 4){
+        if(a.second !== b.second) return a.second - b.second;
+      } else {
+        if(a.second !== b.second) return b.second - a.second;
+      }
+      return a.label.localeCompare(b.label);
+    });
+
+    var html = "";
+    sorted.forEach(function(c){
+      var isChecked = !!selectedIds[c.id];
+      var leftIconHtml = isSelectMode ?
+        '<div class="checkbox-wrap' + (isChecked ? ' checked' : '') + '">' + (isChecked ? '✓' : '') + '</div>' :
+        '<div class="chip mono" style="background:' + colorVar(c.status) + '">' + c.status + c.second + '</div>';
+
+      if(c.kind === "folder"){
+        html +=
+          '<div class="row" data-id="' + c.id + '">' +
+            leftIconHtml +
+            '<div class="row-kind">▸</div>' +
+            '<div class="row-main">' +
+              '<div class="row-label">' + escapeHtml(c.label) + '</div>' +
+              '<div class="row-meta">folder · ' + STATUS[c.status].short + '</div>' +
+            '</div>' +
+            (!isSelectMode ? '<button class="kebab" data-id="' + c.id + '" aria-label="More">⋯</button>' : '') +
+          '</div>';
+      } else {
+        var useConf = CONF_STATUSES[c.status];
+        var metricLabel = useConf ? "confidence" : "priority";
+        html +=
+          '<div class="row" data-id="' + c.id + '">' +
+            leftIconHtml +
+            '<div class="row-kind">•</div>' +
+            '<div class="row-main">' +
+              '<div class="row-label">' + escapeHtml(c.label) + '</div>' +
+              '<div class="row-meta">problem · ' + STATUS[c.status].short + ' · ' + metricLabel + ' ' + c.second + '</div>' +
+            '</div>' +
+            (!isSelectMode ? '<button class="kebab" data-id="' + c.id + '" aria-label="More">⋯</button>' : '') +
+          '</div>';
+      }
+    });
+    host.innerHTML = html;
+
+    Array.prototype.forEach.call(host.querySelectorAll(".row"), function(rowEl){
+      rowEl.addEventListener("click", function(e){
+        if(e.target.closest(".kebab")) return;
+        var id = rowEl.getAttribute("data-id");
+        var child = node.children.filter(function(c){ return c.id === id; })[0];
+        if(!child) return;
+        
+        if(isSelectMode){
+          if(selectedIds[child.id]) delete selectedIds[child.id];
+          else selectedIds[child.id] = child;
+          updateBatchBar();
+          renderBrowse();
+        } else {
+          if(child.kind === "folder"){
+            path.push(child.label);
+            activeSubTab = "items";
+            renderBreadcrumb();
+            renderBrowse();
+          } else {
+            openEditor(child);
+          }
+        }
+      });
+    });
+
+    Array.prototype.forEach.call(host.querySelectorAll(".kebab"), function(btn){
+      btn.addEventListener("click", function(e){
+        e.stopPropagation();
+        var id = btn.getAttribute("data-id");
+        var child = node.children.filter(function(c){ return c.id === id; })[0];
+        if(child) openActionSheet(child);
+      });
+    });
+  }
+
+  function updateBatchBar(){
+    var count = Object.keys(selectedIds).length;
+    el("batchCount").textContent = count;
+    var bar = el("batchBar");
+    if(isSelectMode && count > 0) bar.classList.add("open");
+    else bar.classList.remove("open");
+  }
+
+  el("selectModeBtn").addEventListener("click", function(){
+    isSelectMode = !isSelectMode;
+    selectedIds = {};
+    this.classList.toggle("active-mode", isSelectMode);
+    updateBatchBar();
+    renderBrowse();
+  });
+
+  el("batchCancelBtn").addEventListener("click", function(){
+    isSelectMode = false;
+    selectedIds = {};
+    el("selectModeBtn").classList.remove("active-mode");
+    updateBatchBar();
+    renderBrowse();
+  });
+
+  el("batchMoveBtn").addEventListener("click", function(){
+    openMoveSheetForBatch();
+  });
+
+  el("batchDeleteBtn").addEventListener("click", function(){
+    var items = Object.values(selectedIds);
+    if(items.length === 0) return;
+    if(confirm("Delete " + items.length + " selected item(s)?")){
+      var promises = items.map(function(item){ return deleteNode(item); });
+      Promise.all(promises).then(function(){
+        isSelectMode = false;
+        selectedIds = {};
+        el("selectModeBtn").classList.remove("active-mode");
+        updateBatchBar();
+        renderBrowse();
+      }).catch(function(err){ alert(err.message); });
+    }
+  });
+
+  Array.prototype.forEach.call(el("subTabs").querySelectorAll(".subtab"), function(tabBtn){
+    tabBtn.addEventListener("click", function(){
+      activeSubTab = tabBtn.getAttribute("data-subtab");
+      isSelectMode = false;
+      selectedIds = {};
+      el("selectModeBtn").classList.remove("active-mode");
+      updateBatchBar();
+      renderBrowse();
+    });
+  });
+
+  var overlay = el("overlay");
+  var openSheetEl = null;
+
+  function openSheet(sheetEl){
+    closeSheet();
+    openSheetEl = sheetEl;
+    sheetEl.hidden = false;
+    overlay.hidden = false;
+    requestAnimationFrame(function(){
+      overlay.classList.add("open");
+      sheetEl.classList.add("open");
+    });
+  }
+  function closeSheet(){
+    if(!openSheetEl) { overlay.classList.remove("open"); return; }
+    var s = openSheetEl;
+    s.classList.remove("open");
+    overlay.classList.remove("open");
+    setTimeout(function(){ s.hidden = true; }, 220);
+    openSheetEl = null;
+  }
+  overlay.addEventListener("click", function(){ closeSheet(); closeEditor(); });
+
+  function statusGridHtml(selected){
+    var html = "";
+    for(var s=0; s<=4; s++){
+      html += '<button class="status-opt' + (s===selected?" active":"") + '" data-status="' + s + '" style="--opt-color:' + colorVar(s) + '">' +
+        '<div class="d">' + s + '</div><div class="l">' + STATUS[s].short + '</div></button>';
+    }
+    return html;
+  }
+  function secondRowHtml(selected){
+    var html = "";
+    for(var n=0;n<=4;n++){
+      html += '<button class="second-opt' + (n===selected?" active":"") + '" data-second="' + n + '">' + n + '</button>';
+    }
+    return html;
+  }
+
+  function refreshCreateStatusUI(){
+    el("createStatusGrid").innerHTML = statusGridHtml(createStatus);
+    el("createSecondLabel").textContent = CONF_STATUSES[createStatus] ? "Confidence (0–4)" : "Priority (0–4)";
+    el("createSecondRow").innerHTML = secondRowHtml(createSecond);
+    bindStatusGrid(el("createStatusGrid"), function(s){ createStatus = s; refreshCreateStatusUI(); });
+    bindSecondRow(el("createSecondRow"), function(n){ createSecond = n; refreshCreateStatusUI(); });
+  }
+  function bindStatusGrid(gridEl, cb){
+    Array.prototype.forEach.call(gridEl.querySelectorAll(".status-opt"), function(btn){
+      btn.addEventListener("click", function(){ cb(parseInt(btn.getAttribute("data-status"),10)); });
+    });
+  }
+  function bindSecondRow(rowEl, cb){
+    Array.prototype.forEach.call(rowEl.querySelectorAll(".second-opt"), function(btn){
+      btn.addEventListener("click", function(){ cb(parseInt(btn.getAttribute("data-second"),10)); });
+    });
+  }
+
+  function openCreateSheet(kind){
+    createKind = kind || "folder";
+    createStatus = 3; createSecond = 2;
+    el("nameInput").value = "";
+    Array.prototype.forEach.call(el("createKindSeg").querySelectorAll("button"), function(b){
+      b.classList.toggle("active", b.getAttribute("data-kind") === createKind);
+    });
+    var node = currentNode();
+    el("createSheetSub").textContent = "Added inside \u201c" + node.label + "\u201d";
+    refreshCreateStatusUI();
+    openSheet(el("createSheet"));
+    setTimeout(function(){ el("nameInput").focus(); }, 260);
+  }
+
+  Array.prototype.forEach.call(el("createKindSeg").querySelectorAll("button"), function(b){
+    b.addEventListener("click", function(){
+      createKind = b.getAttribute("data-kind");
+      Array.prototype.forEach.call(el("createKindSeg").querySelectorAll("button"), function(x){ x.classList.toggle("active", x===b); });
+      refreshCreateStatusUI();
+    });
+  });
+
+  el("addBtn").addEventListener("click", function(){ openCreateSheet("folder"); });
+  el("createCancel").addEventListener("click", closeSheet);
+
+  el("createConfirm").addEventListener("click", function(){
+    var name = el("nameInput").value;
+    createNode(createKind, name, createStatus, createSecond).then(function(){
+      closeSheet();
+      renderBrowse();
+    }).catch(function(err){ alert(err.message); });
+  });
+
+  function openMoveSheet(node){
+    actionTarget = node;
+    selectedDestPath = [];
+    renderMoveTree();
+    openSheet(el("moveSheet"));
+  }
+
+  function openMoveSheetForBatch(){
+    actionTarget = null;
+    selectedDestPath = [];
+    renderMoveTree();
+    openSheet(el("moveSheet"));
+  }
+
+  function renderMoveTree(){
+    var container = el("moveFolderTree");
+    function renderNodeRecursive(node, currentPath, depth){
+      var isCurrent = currentPath.join("/") === selectedDestPath.join("/");
+      var indent = depth * 16;
+      var html = '<div class="move-folder-item" data-path=\'' + JSON.stringify(currentPath) + '\' style="padding:6px 8px; padding-left:' + (indent + 8) + 'px; border-radius:6px; cursor:pointer; font-size:13.5px; background:' + (isCurrent ? 'var(--surface-hover)' : 'transparent') + '; margin-bottom:2px; color:' + (isCurrent ? 'var(--accent)' : 'var(--text)') + ';">📁 ' + escapeHtml(node.label) + '</div>';
+      
+      if(node.children){
+        node.children.forEach(function(c){
+          if(c.kind === "folder"){
+            html += renderNodeRecursive(c, currentPath.concat([c.label]), depth + 1);
+          }
+        });
+      }
+      return html;
+    }
+    
+    var treeHtml = '<div class="move-folder-item" data-path="[]" style="padding:6px 8px; border-radius:6px; cursor:pointer; font-size:13.5px; background:' + (selectedDestPath.length === 0 ? 'var(--surface-hover)' : 'transparent') + '; margin-bottom:2px; color:' + (selectedDestPath.length === 0 ? 'var(--accent)' : 'var(--text)') + ';">📁 dos (Root)</div>';
+    if(tree && tree.children){
+      tree.children.forEach(function(c){
+        if(c.kind === "folder"){
+          treeHtml += renderNodeRecursive(c, [c.label], 1);
+        }
+      });
+    }
+    container.innerHTML = treeHtml;
+
+    Array.prototype.forEach.call(container.querySelectorAll(".move-folder-item"), function(item){
+      item.addEventListener("click", function(){
+        selectedDestPath = JSON.parse(item.getAttribute("data-path"));
+        renderMoveTree();
+      });
+    });
+  }
+
+  el("moveCancel").addEventListener("click", closeSheet);
+  el("moveConfirm").addEventListener("click", function(){
+    var sources = [];
+    if(actionTarget){
+      sources.push(path.concat([actionTarget.label]));
+    } else {
+      sources = Object.values(selectedIds).map(function(item){ return path.concat([item.label]); });
+    }
+    if(sources.length === 0) return;
+
+    apiPost("/api/node/move-batch", {sources: sources, destParentPath: selectedDestPath}).then(function(){
+      closeSheet();
+      isSelectMode = false;
+      selectedIds = {};
+      el("selectModeBtn").classList.remove("active-mode");
+      updateBatchBar();
+      reloadTree().then(renderBrowse);
+    }).catch(function(err){ alert(err.message); });
+  });
+
+  function openActionSheet(node){
+    actionTarget = node;
+    el("actionSheetTitle").textContent = "\u201c" + node.label + "\u201d";
+    openSheet(el("actionSheet"));
+  }
+  el("actionCancel").addEventListener("click", closeSheet);
+  el("actionMove").addEventListener("click", function(){
+    var node = actionTarget;
+    closeSheet();
+    setTimeout(function(){ openMoveSheet(node); }, 230);
+  });
+  el("actionRenumber").addEventListener("click", function(){
+    var node = actionTarget;
+    closeSheet();
+    setTimeout(function(){ openRenumberSheet(node); }, 230);
+  });
+  el("actionRename").addEventListener("click", function(){
+    var node = actionTarget;
+    closeSheet();
+    setTimeout(function(){ openRenameSheet(node); }, 230);
+  });
+  el("actionDelete").addEventListener("click", function(){
+    var node = actionTarget;
+    closeSheet();
+    setTimeout(function(){ openConfirmDelete(node); }, 230);
+  });
+
+  function refreshRenumberUI(){
+    el("renumberStatusGrid").innerHTML = statusGridHtml(renumberStatus);
+    el("renumberSecondLabel").textContent = CONF_STATUSES[renumberStatus] ? "Confidence (0–4)" : "Priority (0–4)";
+    el("renumberSecondRow").innerHTML = secondRowHtml(renumberSecond);
+    bindStatusGrid(el("renumberStatusGrid"), function(s){ renumberStatus = s; refreshRenumberUI(); });
+    bindSecondRow(el("renumberSecondRow"), function(n){ renumberSecond = n; refreshRenumberUI(); });
+  }
+
+  function openRenumberSheet(node){
+    actionTarget = node;
+    renumberStatus = node.status;
+    renumberSecond = node.second;
+    el("renumberSheetSub").textContent = "\u201c" + node.label + "\u201d";
+    refreshRenumberUI();
+    openSheet(el("renumberSheet"));
+  }
+  el("renumberCancel").addEventListener("click", closeSheet);
+  el("renumberConfirm").addEventListener("click", function(){
+    if(!actionTarget) return;
+    renumberNode(actionTarget, renumberStatus, renumberSecond).then(function(){
+      closeSheet();
+      if(editorNode && editorNode.id === actionTarget.id) renderEditorHead();
+      renderBrowse();
+    });
+  });
+
+  function openConfirmDelete(node){
+    actionTarget = node;
+    el("confirmTitle").textContent = "Delete \u201c" + node.label + "\u201d?";
+    el("confirmSub").textContent = "This can't be undone.";
+    openSheet(el("confirmSheet"));
+  }
+  el("confirmCancel").addEventListener("click", closeSheet);
+  el("confirmDelete").addEventListener("click", function(){
+    if(!actionTarget) return;
+    var wasEditing = editorNode && editorNode.id === actionTarget.id;
+    deleteNode(actionTarget).then(function(){
+      closeSheet();
+      if(wasEditing) closeEditor();
+      renderBrowse();
+    });
+  });
+
+  function openEditor(node){
+    editorNode = node;
+    renderEditorHead();
+    el("editorTextarea").value = node.content || "";
+    var ev = el("editorView");
+    ev.hidden = false;
+    overlay.hidden = false;
+    requestAnimationFrame(function(){
+      overlay.classList.add("open");
+      ev.classList.add("open");
+    });
+  }
+  function renderEditorHead(){
+    if(!editorNode) return;
+    el("editorChip").textContent = "" + editorNode.status + editorNode.second;
+    el("editorChip").style.background = colorVar(editorNode.status);
+    el("editorLabel").textContent = editorNode.label;
+  }
+  function closeEditor(){
+    var ev = el("editorView");
+    ev.classList.remove("open");
+    overlay.classList.remove("open");
+    setTimeout(function(){ ev.hidden = true; }, 220);
+    editorNode = null;
+  }
+  el("editorBack").addEventListener("click", function(){ closeEditor(); renderBrowse(); });
+  el("editorKebab").addEventListener("click", function(){
+    if(editorNode) openActionSheet(editorNode);
+  });
+
+  var mainEditorTa = el("editorTextarea");
+  enableTabKey(mainEditorTa);
+  mainEditorTa.addEventListener("input", function(){
+    if(!editorNode) return;
+    var content = mainEditorTa.value;
+    editorNode.content = content;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function(){
+      saveNodeContent(editorNode, content).then(function(){
+        var badge = el("editorSaved");
+        badge.style.opacity = "1";
+        setTimeout(function(){ badge.style.opacity = "0"; }, 900);
+      });
+    }, 500);
+  });
+
+  el("syncGithubBtn").addEventListener("click", function(){
+    var btn = this;
+    btn.textContent = "Syncing with GitHub...";
+    apiPost("/api/node/dos/save", {}).then(function(){
+      btn.textContent = "✓ Successfully Synced!";
+      setTimeout(function(){ btn.textContent = "☁️ Save / Sync to GitHub"; closeSheet(); }, 1400);
+    }).catch(function(err){
+      btn.textContent = "Sync Failed";
+      alert(err.message);
+      setTimeout(function(){ btn.textContent = "☁️ Save / Sync to GitHub"; }, 1500);
+    });
+  });
+
+  el("menuBtn").addEventListener("click", function(){
+    var html = "";
+    for(var s=0; s<=4; s++){
+      html += '<div style="display:flex; align-items:center; gap:10px; padding:8px 0;">' +
+        '<div style="width:10px; height:10px; border-radius:50%; background:' + colorVar(s) + '"></div>' +
+        '<div style="font-size:12.5px; color:var(--text-muted);"><b style="color:var(--text)">' + s + ' · ' + STATUS[s].short + '</b> — ' + STATUS[s].name + '</div></div>';
+    }
+    el("legendList").innerHTML = html;
+    openSheet(el("menuSheet"));
+  });
+  el("menuClose").addEventListener("click", closeSheet);
+
+  loadTree().then(function(){
+    renderBreadcrumb();
+    renderBrowse();
+  });
+
+})();
+</script>
+</body>
+</html>
+
