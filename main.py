@@ -20,10 +20,11 @@ for directory in (PROJECTS_DIR, DOS_DIR):
 # Locate the two Python programs relative to main.py
 ms_py = BASE_DIR / "ms.py"
 dos_py = BASE_DIR / "dos.py"
+s_py = BASE_DIR / "../4th/share.py"
 
 
 # Make sure they exist
-for script in (ms_py, dos_py):
+for script in (ms_py, dos_py, s_py):
     if not script.exists():
         print(f"Error: {script} not found.")
         sys.exit(1)
@@ -37,6 +38,7 @@ python = sys.executable
 processes = [
     subprocess.Popen([python, str(ms_py)]),
     subprocess.Popen([python, str(dos_py)]),
+    subprocess.Popen([python, str(s_py)]),
 ]
 
 

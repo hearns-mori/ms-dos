@@ -428,7 +428,7 @@ def main():
     parser = argparse.ArgumentParser(description="WebIDE server")
     parser.add_argument("--root", default="~/ms-dos/projects", help="folder to browse/edit (default: current directory)")
     parser.add_argument("--host", default="0.0.0.0", help="bind address (default: 0.0.0.0)")
-    parser.add_argument("--port", type=int, default=8765, help="port (default: 8080)")
+    parser.add_argument("--port", type=int, default=8001, help="port (default: 8001)")
     parser.add_argument("--token", default=None, help="fixed auth token (default: random, printed on start)")
     args = parser.parse_args()
 
@@ -436,7 +436,7 @@ def main():
     if not ROOT.is_dir():
         print(f"error: --root {ROOT} is not a directory", file=sys.stderr)
         sys.exit(1)
-    TOKEN = args.token or secrets.token_hex(3)
+    TOKEN = "373737"
 
     mimetypes.init()
 
@@ -448,7 +448,7 @@ def main():
     print(" WebIDE server is running")
     print(f"   Root:    {ROOT}")
     print(f"   Local:   http://127.0.0.1:{args.port}/")
-    print(f"   Network: http://{lan_ip}:{args.port}/   <-- open this on your laptop")
+    print(f"   Network: http://{lan_ip}:{args.port}/   <-- other device")
     print(f"   Token:   {TOKEN}")
     print("   (paste the token into the app's Settings panel on first load)")
     print("=" * 60)
